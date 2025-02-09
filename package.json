@@ -38,7 +38,8 @@
     "build:cjs": "tsc -p ./tsconfig.build-cjs.json",
     "build:esm": "tsc -p ./tsconfig.build-esm.json",
     "clean": "rimraf ./dist ./dist-babel-plugin ./dist-swc-plugin",
-    "test": "vitest"
+    "test": "vitest",
+    "prepublish": "yarn build"
   },
   "devDependencies": {
     "@types/babel__core": "^7.20.5",

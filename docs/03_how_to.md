@@ -58,6 +58,7 @@ Nesting state is achieved by just nesting the object.
 import { reactive } from "bonsify";
 
 export const app = reactive({
+  title: "My Awesome App",
   counter: {
     count: 0,
     increase() {
@@ -84,7 +85,7 @@ export const app = reactive({
 });
 ```
 
-Any time you define state with a reference, a variable, you should use `reactive`. This ensures that regardless of using `this` or the reference, you will be accessing the reactive reference.
+Any time you define state with a reference (a variable), you should use `reactive`. This ensures that regardless of using `this` or the reference, you will be accessing the reactive reference.
 
 ## Deriving state
 
@@ -121,7 +122,7 @@ export const app = reactive({
 });
 ```
 
-You explicitly set the new value when needed. And then you might say; "but this might go stale?". That is true, but is that a theoretical concern or a practical one? Also, `computed` recalculates as components consume the state, meaning the expensive computation happens during the rendering phase. You would rather want to have the freedom to run this expensive calculation when it makes sense.
+You explicitly set the new value when needed. And then you might say; "but this might go stale?". That is true, but is that a practical concern or a theoretical one? Also, `computed` recalculates as components consume the state, meaning the expensive computation happens during the rendering phase. You would rather want to have the freedom to run this expensive calculation when it makes sense.
 
 ## Accessing parent state
 
@@ -163,16 +164,16 @@ The great thing about state is that it is really JSON. The functions in the stat
 import { reactive } from "bonsify";
 
 export const createApp = (utils) => {
+  const persistedState = utils.persistence.getJSON("app");
+
   const app = reactive({
     count: 0,
+    ...persistedState,
     increase() {
       this.count++;
     },
-    hydrate() {
-      return JSON.stringify(app);
-    },
-    rehydrate(appState) {
-      Object.assign(app, appState);
+    persist() {
+      utils.persistence.setJSON("app", app);
     },
   });
 

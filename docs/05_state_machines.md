@@ -12,6 +12,7 @@ By simply using a pattern we can resolve this:
 
 ```ts
 import { reactive } from "bonsify";
+
 // We create our machine by defining functions transitioning to
 // the explicit states. We pass a callback which actually performs the transition
 function createToggleMachine(onTransition) {

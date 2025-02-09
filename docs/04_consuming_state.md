@@ -1,6 +1,6 @@
 # Consuming state
 
-**Bonsify** makes observation transparent. With the included babel/swc plugin any component function defined in your codebase will become observers. That means you do not have to think about adding observation or worry about props passing etc. The observation memory footprint is tiny and saves you from a lot of reconciliation work as components will only reconcile by the state they observe. Additionally this observing components uses `memo` as you will be doing a lot less props passing, avoiding waterfall reconciliation. Just think, the more scoped your component is to specific state, the more optimised it will be with reconciliation as well.
+**Bonsify** makes observation transparent. With the included babel/swc plugin any component function defined in your codebase will become observers. That means you do not have to think about adding observation or worry about props passing etc. The observation memory footprint is tiny and saves you from a lot of reconciliation work as components will only reconcile by the state they observe. Additionally these observing components uses `memo` as you will be doing a lot less props passing, avoiding waterfall reconciliation. To optimise, just break up big components consuming a lot of state into smaller nested components.
 
 You can consume state directly in your components:
 
