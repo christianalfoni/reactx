@@ -5,7 +5,7 @@ How can you possibly do any state management with a single primitive of `state`?
 ## Initialize state
 
 ```ts
-import { reactive } from "just-build-it";
+import { reactive } from "bonsify";
 
 export const counter = reactive({
   count: 0,
@@ -20,7 +20,7 @@ Ideally we would not need any primitive at all, but the JavaScript language curr
 You can choose if you want to point to `this` or the returned reference:
 
 ```ts
-import { reactive } from "just-build-it";
+import { reactive } from "bonsify";
 
 export const counter = reactive({
   count: 0,
@@ -39,7 +39,7 @@ There are a few reasons for wanting to dynamically initialize your state:
 - Testing
 
 ```ts
-import { reactive } from "just-build-it";
+import { reactive } from "bonsify";
 
 export const createCounter = (initialCount) =>
   reactive({
@@ -55,7 +55,7 @@ export const createCounter = (initialCount) =>
 Nesting state is achieved by just nesting the object.
 
 ```ts
-import { reactive } from "just-build-it";
+import { reactive } from "bonsify";
 
 export const app = reactive({
   counter: {
@@ -70,7 +70,7 @@ export const app = reactive({
 You can compose by defining the state as a separate object:
 
 ```ts
-import { reactive } from "just-build-it";
+import { reactive } from "bonsify";
 
 const counter = reactive({
   count: 0,
@@ -91,7 +91,7 @@ Any time you define state with a reference, a variable, you should use `reactive
 JavaScript has a concept of deriving state in objects:
 
 ```ts
-import { reactive } from "just-build-it";
+import { reactive } from "bonsify";
 
 export const app = reactive({
   count: 0,
@@ -109,7 +109,7 @@ Using `getters` you can derive state. You might argue that primitives like `comp
 So what do you do if you have expensive computation?
 
 ```ts
-import { reactive } from "just-build-it";
+import { reactive } from "bonsify";
 
 export const app = reactive({
   count: 0,
@@ -128,7 +128,7 @@ You explicitly set the new value when needed. And then you might say; "but this 
 When nesting state you might need access to parent state. This can be achieved by using a `getter`:
 
 ```ts
-import { reactive } from "just-build-it";
+import { reactive } from "bonsify";
 
 const createNested = (app) =>
   reactive({
@@ -160,7 +160,7 @@ export const createApp = () => {
 The great thing about state is that it is really JSON. The functions in the state tree will disappear if you serialize the state. So `JSON.stringify` can be performed in any part of the tree and you can also easily bring back persisted state by spreading it into your state. Here using a pseudo utility for persisting JSON:
 
 ```ts
-import { reactive } from "just-build-it";
+import { reactive } from "bonsify";
 
 export const createApp = (utils) => {
   const app = reactive({

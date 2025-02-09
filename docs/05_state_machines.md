@@ -11,7 +11,7 @@ Normally a state machine is implemented with a dispatcher type of concept. That 
 By simply using a pattern we can resolve this:
 
 ```ts
-import { reactive } from "just-build-it";
+import { reactive } from "bonsify";
 // We create our machine by defining functions transitioning to
 // the explicit states. We pass a callback which actually performs the transition
 function createToggleMachine(onTransition) {

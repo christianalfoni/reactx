@@ -5,7 +5,7 @@
 You can consume state directly in your components:
 
 ```tsx
-import { reactive } from "just-build-it";
+import { reactive } from "bonsify";
 
 const counter = reactive({
   count: 0,

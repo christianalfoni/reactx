@@ -1,7 +1,7 @@
 # A single primitive
 
 ```ts
-import { reactive } from "just-build-it";
+import { reactive } from "bonsify";
 
 export const app = reactive({
   count: 0,
