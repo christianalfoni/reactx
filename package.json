@@ -1,0 +1,59 @@
+{
+  "name": "bonsify",
+  "version": "0.1.0",
+  "description": "Well-structured, artfully maintained state without the bloat of unnecessary abstractions.",
+  "keywords": [
+    "state",
+    "management",
+    "react",
+    "redux",
+    "mobx",
+    "context",
+    "hooks"
+  ],
+  "author": "Christian Alfoni",
+  "directories": {
+    "doc": "docs"
+  },
+  "files": [
+    "dist"
+  ],
+  "module": "./dist/esm/index.js",
+  "main": "./dist/esm/index.js",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "types": "./dist/esm/index.d.ts"
+    },
+    "./babel-plugin": {
+      "import": "./dist/esm/babel-plugin.js",
+      "types": "./dist/esm/babel-plugin.d.ts",
+      "default": "./dist/cjs/babel-plugin.cjs"
+    }
+  },
+  "types": "./dist/esm/index.d.ts",
+  "scripts": {
+    "build": "yarn clean && yarn build:cjs && yarn build:esm",
+    "build:cjs": "tsc -p ./tsconfig.build-cjs.json",
+    "build:esm": "tsc -p ./tsconfig.build-esm.json",
+    "clean": "rimraf ./dist ./dist-babel-plugin ./dist-swc-plugin",
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "@types/babel__core": "^7.20.5",
+    "@types/babel__traverse": "^7.20.6",
+    "@types/react": "^19.0.8",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.7.3",
+    "vite": "^6.1.0",
+    "vitest": "^3.0.5"
+  },
+  "dependencies": {
+    "@babel/core": "^7.26.7",
+    "@babel/traverse": "^7.26.7",
+    "@babel/types": "^7.26.7",
+    "react": "^19.0.0"
+  },
+  "license": "ISC"
+}
