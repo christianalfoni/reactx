@@ -1,6 +1,6 @@
 # How to
 
-How can you possibly do any state management with a single primitive of `state`? Well, there is this magical construct we tend to forget when solving problems with abstractions... the JavaScript language and programming patterns.
+How can you possibly do any state management with a single primitive of `reactive`? Well, there is this magical construct we tend to forget when solving problems with abstractions... the language itself.
 
 ## Initialize state
 

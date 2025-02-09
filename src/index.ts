@@ -1,6 +1,6 @@
 import { memo, useSyncExternalStore } from "react";
-import { a } from "vitest/dist/chunks/suite.BJU7kdY9";
 
+const reactiveCache = new WeakMap<object, any>();
 const allObservations = new WeakMap<any, Record<string, Set<Observer>>>();
 const observersStack: Observer[] = [];
 
@@ -109,7 +109,17 @@ const mutatingArrayMethods = [
 ];
 
 export function reactive<T extends Record<string, any>>(value: T) {
-  return new Proxy(value, {
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+
+  const cachedProxy = reactiveCache.get(value);
+
+  if (cachedProxy) {
+    return cachedProxy;
+  }
+
+  const proxy = new Proxy(value, {
     get(target, key) {
       const result = Reflect.get(target, key);
 
@@ -171,4 +181,8 @@ export function reactive<T extends Record<string, any>>(value: T) {
       return wasSet;
     },
   });
+
+  reactiveCache.set(value, proxy);
+
+  return proxy;
 }
