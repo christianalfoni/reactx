@@ -30,7 +30,7 @@ export const transform: PluginObj = {
       // @ts-ignore
       const filename = state.filename || state.opts.filename;
       // @ts-ignore
-      const PACKAGE_NAME = "just-build-it";
+      const PACKAGE_NAME = "bonsify";
 
       if (filename && !shouldProcessFile(filename)) {
         // Skip processing

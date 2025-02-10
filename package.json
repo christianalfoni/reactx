@@ -1,6 +1,6 @@
 {
   "name": "bonsify",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Well-structured, artfully maintained state without the bloat of unnecessary abstractions.",
   "keywords": [
     "state",
