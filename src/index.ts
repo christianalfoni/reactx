@@ -1,7 +1,7 @@
 import { memo, useSyncExternalStore } from "react";
 
-const reactiveCache = new WeakMap<object, any>();
-const allObservations = new WeakMap<any, Record<string, Set<Observer>>>();
+const proxyCache = new WeakMap<object, any>();
+const allObservations = new WeakMap<any, Set<Observer>>();
 const observersStack: Observer[] = [];
 
 function getCurrentObserver() {
@@ -18,50 +18,37 @@ export class Observer {
   subscribe = (onNotify: () => void) => {
     this.onNotify = onNotify;
 
-    const targets = Array.from(this.observations.keys());
+    for (const [target] of this.observations) {
+      const allTargetObservations =
+        allObservations.get(target) || new Set<Observer>();
 
-    for (const target of targets) {
-      const keys = this.observations.get(target)!;
-
-      for (const key of keys) {
-        const allTargetObservations = allObservations.get(target) || {};
-        const targetObservers =
-          allTargetObservations[key] || new Set<Observer>();
-
-        targetObservers.add(this);
-        allTargetObservations[key] = targetObservers;
-        allObservations.set(target, allTargetObservations);
-      }
+      allTargetObservations.add(this);
+      allObservations.set(target, allTargetObservations);
     }
 
     return () => {
-      for (const target of targets) {
-        const keys = this.observations.get(target)!;
+      for (const [target] of this.observations) {
+        const allTargetObservations = allObservations.get(target)!;
 
-        for (const key of keys) {
-          const allTargetObservations = allObservations.get(target)!;
-          const targetObservers = allTargetObservations[key];
-
-          targetObservers.delete(this);
-
-          if (targetObservers.size === 0) {
-            delete allTargetObservations[key];
-          }
-
-          allObservations.set(target, allTargetObservations);
-        }
+        allTargetObservations.delete(this);
       }
     };
   };
-  observe(target: any, key: string) {
+  observe(target: any, key?: string) {
     const targetObservations =
       this.observations.get(target) || new Set<string>();
 
-    targetObservations.add(key);
+    if (key) {
+      targetObservations.add(key);
+    }
 
     this.observations.set(target, targetObservations);
   }
-  notify() {
+  notify(target: any, key?: string) {
+    if (key && !this.observations.get(target)?.has(key)) {
+      return;
+    }
+
     this.snapshot = ++globalSnapshot;
 
     this.onNotify?.();
@@ -108,18 +95,38 @@ const mutatingArrayMethods = [
   "reverse",
 ];
 
-export function reactive<T extends Record<string, any>>(value: T): T {
-  if (value === null || typeof value !== "object") {
-    return value;
-  }
+const iteratingArrayMethods = {
+  map: (args: any[]) => {
+    args[0] = reactive(args[0]);
+  },
+  filter: (args: any[]) => {
+    args[0] = reactive(args[0]);
+  },
+  reduce: (args: any[]) => {
+    args[1] = reactive(args[1]);
+  },
+  reduceRight: (args: any[]) => {
+    args[1] = reactive(args[1]);
+  },
+  find: (args: any[]) => {
+    args[0] = reactive(args[0]);
+  },
+  findIndex: (args: any[]) => {
+    args[0] = reactive(args[0]);
+  },
+  forEach: (args: any[]) => {
+    args[0] = reactive(args[0]);
+  },
+  some: (args: any[]) => {
+    args[0] = reactive(args[0]);
+  },
+  every: (args: any[]) => {
+    args[0] = reactive(args[0]);
+  },
+};
 
-  const cachedProxy = reactiveCache.get(value);
-
-  if (cachedProxy) {
-    return cachedProxy;
-  }
-
-  const proxy = new Proxy(value, {
+function createArrayProxy(target: any) {
+  return new Proxy(target, {
     get(target, key) {
       const result = Reflect.get(target, key);
 
@@ -127,13 +134,15 @@ export function reactive<T extends Record<string, any>>(value: T): T {
         return result;
       }
 
-      if (
-        typeof target[key] === "function" &&
-        Array.isArray(target) &&
-        mutatingArrayMethods.includes(key as string)
-      ) {
+      const isAccessingFunction = typeof result === "function";
+
+      if (!isAccessingFunction) {
+        return result;
+      }
+
+      if (mutatingArrayMethods.includes(key)) {
         const originMethod = target[key];
-        const observers = allObservations.get(target)?.[key as string];
+        const observers = allObservations.get(target);
 
         if (!observers) {
           return originMethod;
@@ -144,18 +153,28 @@ export function reactive<T extends Record<string, any>>(value: T): T {
           const currentObservers = Array.from(observers);
 
           for (const observer of currentObservers) {
-            observer.notify();
+            observer.notify(target);
           }
 
           return result;
         };
       }
 
-      getCurrentObserver()?.observe(target, key);
+      if (key in iteratingArrayMethods) {
+        const originMethod = target[key];
+        // @ts-ignore
+        const reactifier = iteratingArrayMethods[key];
 
-      if (result !== null && typeof result === "object") {
-        return reactive(result);
+        return (...args: any[]) => {
+          return originMethod.apply(target, [
+            (...methodArgs: any[]) => {
+              reactifier(methodArgs);
+              return args[0](...methodArgs);
+            },
+          ]);
+        };
       }
+
       return result;
     },
     set(target, key, value) {
@@ -169,12 +188,81 @@ export function reactive<T extends Record<string, any>>(value: T): T {
         return wasSet;
       }
 
-      const observers = allObservations.get(target)?.[key];
+      const observers = allObservations.get(target);
 
       if (observers) {
         const currentObservers = Array.from(observers);
         for (const observer of currentObservers) {
-          observer.notify();
+          observer.notify(target);
+        }
+      }
+
+      return wasSet;
+    },
+  });
+}
+
+export function reactive<T extends Record<string, any>>(value: T): T {
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+
+  const cachedProxy = proxyCache.get(value);
+
+  if (cachedProxy) {
+    return cachedProxy;
+  }
+
+  const proxy = new Proxy(value, {
+    get(target, key) {
+      const result = Reflect.get(target, key);
+
+      if (typeof key === "symbol") {
+        return result;
+      }
+
+      const isAccessingFunction = typeof result === "function";
+
+      if (isAccessingFunction) {
+        return result;
+      }
+
+      const isAccessingArray = Array.isArray(result);
+
+      if (isAccessingArray) {
+        getCurrentObserver()?.observe(result);
+
+        return createArrayProxy(result);
+      }
+
+      const descriptor = Object.getOwnPropertyDescriptor(target, key);
+
+      if (descriptor && !descriptor.configurable) {
+        // For non-configurable properties, return the raw value.
+        return result;
+      }
+
+      getCurrentObserver()?.observe(target, key);
+
+      return reactive(result);
+    },
+    set(target, key, value) {
+      const wasSet = Reflect.set(target, key, value);
+
+      if (typeof key === "symbol") {
+        return wasSet;
+      }
+
+      if (!wasSet) {
+        return wasSet;
+      }
+
+      const observers = allObservations.get(target);
+
+      if (observers) {
+        const currentObservers = Array.from(observers);
+        for (const observer of currentObservers) {
+          observer.notify(target, key);
         }
       }
 
@@ -182,7 +270,7 @@ export function reactive<T extends Record<string, any>>(value: T): T {
     },
   });
 
-  reactiveCache.set(value, proxy);
+  proxyCache.set(value, proxy);
 
   return proxy;
 }

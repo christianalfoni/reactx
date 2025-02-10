@@ -6,6 +6,18 @@ import { utils } from "./utils";
 
 const app = createCounter(utils);
 
+function Item({
+  item,
+}: {
+  item: { id: number; count: number; increase(): void };
+}) {
+  return (
+    <div onClick={() => item.increase()}>
+      {item.id} {item.count}
+    </div>
+  );
+}
+
 function App() {
   return (
     <>
@@ -21,11 +33,15 @@ function App() {
       <div className="card">
         <button
           onClick={() => {
-            app.counter.increase();
+            app.increase();
+            app.addItem();
           }}
         >
-          count is {app.counter.count}
+          count is
         </button>
+        {app.items.map((item, index) => (
+          <Item key={index} item={item} />
+        ))}
         <p>
           Edit <code>src/App.tsx</code> and save to test HMR
         </p>
