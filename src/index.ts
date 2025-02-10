@@ -108,7 +108,7 @@ const mutatingArrayMethods = [
   "reverse",
 ];
 
-export function reactive<T extends Record<string, any>>(value: T) {
+export function reactive<T extends Record<string, any>>(value: T): T {
   if (value === null || typeof value !== "object") {
     return value;
   }
