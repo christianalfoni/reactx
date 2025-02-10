@@ -52,7 +52,7 @@ export const createCounter = (initialCount) =>
 
 ## Nesting and composing state
 
-Nesting state is achieved by just nesting the object.
+You will be building a state tree for all the state in your application and requires nesting state and composing state. Since this state tree is just a JavaScript object you use the language feature to nest and compose.
 
 ```ts
 import { reactive } from "bonsify";

@@ -38,9 +38,9 @@ It does no matter what source your UI derives its state from, it being from a DO
 
 And this is exactly what components gave us. They gave us the ability to look at a UI and mentally draw rectangles around sections, reason about the encapsulations of UI code and find directories and files that to some degree reflects that mental model.
 
-But this is not the case for state. If the application has some state from components, some state passed as props from parent components, maybe some state in a context and some in a global state store, you will have a much harder time reasoning about the encapsulations of state code and find directories and files that to some degree reflects that mental model.
+But this is not the case for state. If the application has many components where some state originates from the component, some state is passed as props from parent components, maybe some state in a context and some in a global state store, you will have a much harder time reasoning about the encapsulations of state code and find directories and files that to some degree reflects that mental model.
 
-With **bonsify** you think about your application state as a state tree. The state tree you derive by looking at a piece of UI should be a very similar tree to what is actually implemented in the application.
+With **bonsify** you think about your application state as a state tree. That means the state tree you derive from looking at the UI of the application will have similar encapsulations, directories and folders in the codebase.
 
 ## Ignoring guarantees
 
