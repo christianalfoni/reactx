@@ -14,28 +14,39 @@ By simply using a pattern we can resolve this:
 import { reactive } from "bonsify";
 
 // We create our machine by defining functions transitioning to
-// the explicit states. We pass a callback which actually performs the transition
-function createToggleMachine(onTransition) {
-  const FOO = () => ({
-    state: "FOO",
-    toggle() {
-      onTransition(BAR());
+// the explicit states. The state functions close over the object
+// representing the state. You can do whatever you want there, like
+// starting handling side effects
+function createCounter() {
+  const IDLE = () => ({
+    mode: "IDLE",
+    start() {
+      counter.state = COUNTING()
     },
   });
-  const BAR = () => ({
-    state: "BAR",
-    toggle() {
-      onTransition(FOO());
-    },
+  const COUNTING = () => {
+    const interval = setInterval(() => {
+      counter.count++
+    }, 1000)
+
+    return ({
+      mode: "COUNTING",
+      stop() {
+        clearInterval(interval)
+        counter.state = IDLE()
+      },
+    })
+  };
+
+  const counter = reactive({
+    state: IDLE(),
+    count: 0
   });
 
-  // We return the initial state
-  return FOO();
+  return counter;
 }
 
 const app = reactive({
-  // The machine can be put anywhere, but we decide to put it here and
-  // simply update the state whenever the machine transitions
-  toggler: createToggleMachine((state) => (app.toggler = state)),
+  counter: createCounter(),
 });
 ```
