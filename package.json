@@ -1,6 +1,6 @@
 {
   "name": "bonsify",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "Well-structured, artfully maintained state without the bloat of unnecessary abstractions.",
   "keywords": [
     "state",
@@ -30,6 +30,11 @@
       "import": "./dist/esm/babel-plugin.js",
       "types": "./dist/esm/babel-plugin.d.ts",
       "default": "./dist/cjs/babel-plugin.cjs"
+    },
+    "./swc-plugin": {
+      "import": "./dist/esm/swc-plugin.js",
+      "types": "./dist/esm/swc-plugin.d.ts",
+      "default": "./dist/cjs/swc-plugin.cjs"
     }
   },
   "types": "./dist/esm/index.d.ts",
@@ -54,7 +59,9 @@
     "@babel/core": "^7.26.7",
     "@babel/traverse": "^7.26.7",
     "@babel/types": "^7.26.7",
-    "react": "^19.0.0"
+    "babel-plugin-observing-components": "^0.1.0",
+    "react": "^19.0.0",
+    "swc-plugin-observing-components": "^0.1.0"
   },
   "license": "ISC"
 }
