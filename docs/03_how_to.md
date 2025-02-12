@@ -241,4 +241,26 @@ const state = {
 };
 ```
 
-Reactions and effects are fundamentally bad constructs. They do not improve your understanding of how your code executes and are not necessary. Even in scenarios where the `count` could change from multiple places and you want to centralise the log statement the indirection is not worth it, rather lift the logic into a function that changes the count and does the log.
+Reactions and effects are fundamentally bad constructs for state management. They do not improve your understanding of how your code executes and are not necessary. Even in scenarios where the `count` could change from multiple places and you want to centralise the log statement the indirection is not worth it, rather lift the logic into a function that changes the count and does the log.
+
+## Guarantees and encapsulation
+
+Defaulting to strong guarantees and encapsulation typically slows down development. For example Redux requires you to create and dispatch and action, then resolve an immutable state change within a reducer. This encapsulates the state and gives some guarantees, but it slows you down. With **bonsify** we rather subscribe to an open and accessible model, where you as a developer and team create guarantees and encapsulations where it makes sense. An example of this would be:
+
+```ts
+const createItem = (data) => {
+  const reactiveData = reactive(data)
+
+  return {
+    id: reactiveData.id,
+    get completed() {
+      return reactiveData.completed
+    },
+    toggle() {
+      reactiveData.completed = !reactivedata.completed
+    }
+  }
+}
+```
+
+Now you have encapsulated the `data` of this item and created a guarantee that `toggle` has to be called to change the `completed` state of that data. 
