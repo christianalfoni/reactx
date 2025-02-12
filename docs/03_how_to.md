@@ -17,7 +17,7 @@ export const counter = reactive({
 
 Ideally we would not need any primitive at all, but the JavaScript language currently does not provide any mechanism to create objects that can be observed for changes.
 
-You can choose if you want to point to `this` or the returned reference:
+When pointing to state to read it or make changes you need to point to the reactive reference. Using `this` will **always** point to the reactive reference, but when pointing to variables those variables needs to be `reactive`.
 
 ```ts
 import { reactive } from "bonsify";
@@ -105,7 +105,7 @@ export const app = reactive({
 });
 ```
 
-Using `getters` you can derive state. You might argue that primitives like `computed` will also cache the derived state. That is true, but how much state do you really need to cache? In components you are already deriving most UI state without any caching and caching can only be defended by expensive computation.
+Using `getters` you can derive state. You can argue that primitives like `computed` will also cache the derived state, but how often is the cache actually used? When changing state you are typically looking at the derived UI of it. That means whatever `computed` you are using is always re-evaluating anyways.
 
 So what do you do if you have expensive computation?
 
@@ -146,7 +146,6 @@ export const createApp = () => {
     },
     increase() {
       this.count++;
-      this.double = expensiveDoubleComputation(this.count);
     },
   });
 
@@ -214,7 +213,7 @@ export const app = reactive({
 
 ## Effects/Reactions
 
-The promise of the the react/effect is to execute code when a state change occurs. Even though this is an appealing concept it has a really bad side effect, indirection.
+The promise of the the effect/reaction is to execute code when a state change occurs. Even though this is an appealing concept it has a really bad side effect, indirection.
 
 ```ts
 const state = {
@@ -243,9 +242,11 @@ const state = {
 
 Reactions and effects are fundamentally bad constructs for state management. They do not improve your understanding of how your code executes and are not necessary. Even in scenarios where the `count` could change from multiple places and you want to centralise the log statement the indirection is not worth it, rather lift the logic into a function that changes the count and does the log.
 
+> This mechanism is what enables components to observe changes and reconcile. Deriving state into UI makes a lot of sense, but managing state in and of itself becomes confusing
+
 ## Guarantees and encapsulation
 
-Defaulting to strong guarantees and encapsulation typically slows down development. For example Redux requires you to create and dispatch and action, then resolve an immutable state change within a reducer. This encapsulates the state and gives some guarantees, but it slows you down. With **bonsify** we rather subscribe to an open and accessible model, where you as a developer and team create guarantees and encapsulations where it makes sense. An example of this would be:
+Defaulting to strong guarantees and encapsulation typically slows down development. For example Redux requires you to create an action,dispatch it and then resolve an immutable state change within a reducer. This encapsulates the state and gives some guarantees, but it slows you down. With **bonsify** we rather subscribe to an open and accessible model, where you as a developer and team create guarantees and encapsulations where it makes sense. An example of this would be:
 
 ```ts
 const createItem = (data) => {
