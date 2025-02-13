@@ -282,7 +282,7 @@ const data = await fetchData()
 But promises does not disappear when it is resolved, the promise IS the value. So you can also say:
 
 ```ts
-// The promise is only there for as long as the data fetching runs
+// The promise is the promise of the value and the resolved value
 const asyncData = fetchData()
 const data = await asyncData
 const dataAgain = await asyncData
