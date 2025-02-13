@@ -270,22 +270,41 @@ Now you have encapsulated the `data` of this item and created a guarantee that `
 
 ## Promises
 
-You can choose to put promises into your state tree. This is valuable with for example React as you can suspend those promises in components. To make the value of a promise reactive, you just have to use the `reactive` primitive.
+You can choose to put promises into your state tree. This is especially valuable with React as you can suspend those promises in components. To make the value of a promise reactive, you just have to use the `reactive` primitive.
+
+The mental model for promises is often that they act as a temporary primitive that transfers a value from an asynchronous source and to you. Like:
 
 ```ts
-export const createApp = (utils: Utils) =>
-  reactive({
-    items: [] as Item[],
-    addItem() {
-      this.items.push(
-        reactive({
-          counter: utils.fetchCounter().then(reactive),
-          async increase() {
-            const counter = await this.counter;
-            counter.count++;
-          },
-        })
-      );
-    },
-  });
+// The promise is only there for as long as the data fetching runs
+const data = await fetchData()
+```
+
+But promises does not disappear when it is resolved, the promise IS the value. So you can also say:
+
+```ts
+// The promise is only there for as long as the data fetching runs
+const asyncData = fetchData()
+const data = await asyncData
+const dataAgain = await asyncData
+```
+
+You can hold on to the promise and retrieve the value whenever you want. So for example we can have a promise of a counter and make it reactive:
+
+```ts
+export const app = reactive({
+  counter: fetchCounter().then(reactive),
+  async increase() {
+    // Just await the value to unwrap it
+    const counter = await this.counter;
+    counter.count++;
+  }    
+});
+
+// In a component
+function Counter() {
+  // Use Reacts use hook to unwrap it, using suspense
+  const counter = use(app.counter)
+
+  return <div>{counter.count}</div>
+}
 ```
