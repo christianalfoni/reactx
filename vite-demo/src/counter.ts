@@ -1,21 +1,22 @@
 import { reactive } from "bonsify";
 import type { Utils } from "./utils";
 
-export const createCounter = (utils: Utils) =>
+export const createApp = (utils: Utils) =>
   reactive({
-    count: 0,
-    items: [] as Array<{ id: number; count: number; increase(): void }>,
-    increase() {
-      this.count = utils.adder(this.count, 1);
-    },
+    items: [] as Array<{
+      id: number;
+      increase(): void;
+      counter: Promise<{ count: number }>;
+    }>,
     addItem() {
       this.items.push(
         reactive({
           id: this.items.length,
-          count: 0,
-          increase() {
-            this.count++;
+          async increase() {
+            const counter = await this.counter;
+            counter.count++;
           },
+          counter: utils.fetchCounter().then(reactive),
         })
       );
     },

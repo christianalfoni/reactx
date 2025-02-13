@@ -1,24 +1,38 @@
 import reactLogo from "./assets/react.svg";
 import viteLogo from "/vite.svg";
 import "./App.css";
-import { createCounter } from "./counter";
+import { createApp } from "./counter";
 import { utils } from "./utils";
+import { Suspense, use } from "react";
 
-const app = createCounter(utils);
+const app = createApp(utils());
 
-function Item({
-  item,
-}: {
-  item: { id: number; count: number; increase(): void };
-}) {
+type Item = {
+  id: number;
+  increase(): void;
+  counter: Promise<{ count: number }>;
+};
+
+function ItemCounter({ item }: { item: Item }) {
+  console.log("Render ItemCounter");
+  const counter = use(item.counter);
+  return <div onClick={() => item.increase()}>{counter.count}</div>;
+}
+
+function Item({ item }: { item: Item }) {
+  console.log("Render Item");
   return (
     <div onClick={() => item.increase()}>
-      {item.id} {item.count}
+      {item.id}
+      <Suspense fallback={<div>Loading...</div>}>
+        <ItemCounter item={item} />
+      </Suspense>
     </div>
   );
 }
 
 function App() {
+  console.log("Render App");
   return (
     <>
       <div>
@@ -33,7 +47,6 @@ function App() {
       <div className="card">
         <button
           onClick={() => {
-            app.increase();
             app.addItem();
           }}
         >
@@ -53,4 +66,10 @@ function App() {
   );
 }
 
-export default App;
+export default function AppWrapper() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <App />
+    </Suspense>
+  );
+}

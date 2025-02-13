@@ -215,15 +215,13 @@ export function reactive<T extends Record<string, any>>(value: T): T {
 
   const proxy = new Proxy(value, {
     get(target, key) {
-      const result = Reflect.get(target, key);
+      const result = Reflect.get(target, key) as any;
 
-      if (typeof key === "symbol") {
-        return result;
-      }
-
-      const isAccessingFunction = typeof result === "function";
-
-      if (isAccessingFunction) {
+      if (
+        typeof key === "symbol" ||
+        typeof result === "function" ||
+        (result && result instanceof Promise)
+      ) {
         return result;
       }
 
