@@ -250,20 +250,42 @@ Defaulting to strong guarantees and encapsulation typically slows down developme
 
 ```ts
 const createItem = (data) => {
-  const reactiveData = reactive(data)
+  const reactiveData = reactive(data);
 
   return {
     get id() {
-      return reactiveData.id
+      return reactiveData.id;
     },
     get completed() {
-      return reactiveData.completed
+      return reactiveData.completed;
     },
     toggle() {
-      reactiveData.completed = !reactivedata.completed
-    }
-  }
-}
+      reactiveData.completed = !reactivedata.completed;
+    },
+  };
+};
 ```
 
-Now you have encapsulated the `data` of this item and created a guarantee that `toggle` has to be called to change the `completed` state of that data. 
+Now you have encapsulated the `data` of this item and created a guarantee that `toggle` has to be called to change the `completed` state of that data.
+
+## Promises
+
+You can choose to put promises into your state tree. This is valuable with for example React as you can suspend those promises in components. To make the value of a promise reactive, you just have to use the `reactive` primitive.
+
+```ts
+export const createApp = (utils: Utils) =>
+  reactive({
+    items: [] as Item[],
+    addItem() {
+      this.items.push(
+        reactive({
+          counter: utils.fetchCounter().then(reactive),
+          async increase() {
+            const counter = await this.counter;
+            counter.count++;
+          },
+        })
+      );
+    },
+  });
+```
