@@ -4,7 +4,7 @@
     "target": "ES2017",
     "moduleResolution": "node",
     "skipLibCheck": true,
-    "importHelpers": true,
+    "importHelpers": false,
     "pretty": true,
     "sourceMap": true,
     "inlineSources": true,
@@ -17,5 +17,5 @@
     "isolatedModules": true
   },
   "include": ["src"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "src/index.test.ts"]
 }
