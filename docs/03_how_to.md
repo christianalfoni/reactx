@@ -253,7 +253,9 @@ const createItem = (data) => {
   const reactiveData = reactive(data)
 
   return {
-    id: reactiveData.id,
+    get id() {
+      return reactiveData.id
+    },
     get completed() {
       return reactiveData.completed
     },
