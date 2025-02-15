@@ -42,10 +42,9 @@ But this is not the case for state. If the application has many components where
 
 With **bonsify** you think about your application state as a state tree. That means the state tree you derive from looking at the UI of the application will have similar encapsulations, directories and folders in the codebase.
 
-## Ignoring guarantees
+## Forced guarantees
 
 We are often taught that certain abstractions and primitives are there to create guarantees. For example React went on somewhat of a crusade of "mutability is the root of all evil". Yes, immutability guarantees values will not change from under you, but stating that mutability is inherently bad and immutability is inherently good is absolute bullshit. Immutability has a big cost in JavaScript. The performance and memory footprint might be minimal, but the language has no built in primitives for immutability. That means you have to break down the intuition of expressing changes in the language and learn new primitives, or at least new verbose patterns of expressing change. Also reconciliation by value comparison (React), as opposed to observation (Vue), is why React has performance issues.
 
 We are also taught that reducers has the guarantee of ensuring changes can only happen within the reducer. This is true and also led to Mobx protecting state changes behind the concept of "actions", leading to async functions not being able to perform state changes, leading to yet another primitive of `flow` etc. Isolating state changes in reducers to guarantee source of change is also complete bullshit. It is theoretically correct, but in practice it creates a lot more friction than value.
 
-We have to start ignoring these theoretically correct concepts, as opposed to striving for them. We have to be pragmatic developers and focus on creating actual value.
