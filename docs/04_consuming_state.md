@@ -1,49 +1,21 @@
 # Consuming state
 
-**Bonsify** makes observation transparent. With the included babel/swc plugin any component function defined in your codebase will become observers. That means you do not have to think about adding observation or worry about props passing etc. The observation memory footprint is tiny and saves you from a lot of reconciliation work as components will only reconcile by the state they observe. Additionally these observing components uses `memo` as you will be doing a lot less props passing, avoiding waterfall reconciliation. To optimise, just break up big components consuming a lot of state into smaller nested components.
+**Bonsify** makes observation transparent. With the included babel/swc plugin any component function defined in your codebase will become observers. That means you do not have to think about adding observation or worry about props passing etc. The observation memory footprint is tiny and saves you from a lot of reconciliation work as components will only reconcile by the state they observe. Additionally these observing components uses `memo` as your props passing will mostly be with "non changing references".
 
-You can consume state directly in your components:
+## Creating a contract between state and components
 
-```tsx
-import { reactive } from "bonsify";
+With state management solutions you often consume root state through a context provider and use selectors to narrow down to the specific state you want to consume. Problems arises if you state is at some level dynamic. Either it is there, or it is not there.
 
-const counter = reactive({
-  count: 0,
-  increase() {
-    this.count++;
-  },
-});
+For example a component might want access to a user, but the user might be `null`. If the user is passed as a prop, it is guaranteed it will be there. But if it is consumed by a selector hook, you can not give that same guarantee.
 
-export function App() {
-  return (
-    <button onClick={() => counter.increase()}>
-      Increase ({counter.count})
-    </button>
-  );
-}
-```
-
-But it is recommendede to provide the state using a Provider. This helps testability and providing the state in multiple environments.
-
-```ts
-import { createContext, context } from "react";
-
-export const appContext = createContext();
-export const useApp = () => useContext(context);
-```
+That is why you should not consume state directly or using a context provider. Pass it down as props.
 
 ```tsx
-import { createRoot } from "react-dom/client";
-import { createApp } from "./app";
-import { MyApp } from "./MyApp";
-import { appContext } from "./appContext";
+import { createState } from "./state";
 
-const el = document.querySelector("#root");
-const root = createRoot(el);
+const state = createState();
 
-root.render(
-  <appContext.Provider value={createApp()}>
-    <MyApp />
-  </appContext.Provider>
-);
+render(<App state={state} />);
 ```
+
+As your components narrows down on specific state, also pass the related narrowed state down as props. Your components can always reference back up the state tree no matter how deep they are. Passing these props has no effect on performance as they are mutable.

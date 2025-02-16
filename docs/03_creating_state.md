@@ -1,8 +1,8 @@
-# How to
+# Creating state
 
 How can you possibly do any state management with a single primitive of `reactive`? Well, there is this magical construct we tend to forget when solving problems with abstractions... the language itself.
 
-## Initialize state
+## Defining state
 
 ```ts
 import { reactive } from "bonsify";
@@ -30,29 +30,75 @@ export const counter = reactive({
 });
 ```
 
-## Dynamically initialize state
+## Constructing state
 
-There are a few reasons for wanting to dynamically initialize your state:
-
-- Pass in environment dependencies and/or configuration
-- Rehydrate state from the server
-- Testing
+To go beyond just defining state, you can construct it. Plain objects does not have constructors like classes, but you can get the same functionality by simply creating a function.
 
 ```ts
 import { reactive } from "bonsify";
 
-export const createCounter = (initialCount) =>
-  reactive({
+export const createCounter = () => {
+  return reactive({
+    count: 0,
+    increase() {
+      this.count++;
+    },
+  });
+};
+```
+
+By creating a function you can pass in dependencies:
+
+```ts
+import { reactive } from "bonsify";
+
+export const createCounter = (initialCount) => {
+  return reactive({
     count: initialCount,
     increase() {
       this.count++;
     },
   });
+};
 ```
 
-## Constructor thingy
+You can define private variables:
 
-## Exposing immutable interface to React
+```ts
+import { reactive } from "bonsify";
+
+export const createCounter = (initialCount) => {
+  const count = initialCount || 10;
+
+  return reactive({
+    count,
+    increase() {
+      this.count++;
+    },
+  });
+};
+```
+
+You can separate functionality from definitions:
+
+```ts
+import { reactive } from "bonsify";
+
+export const createCounter = (initialCount) => {
+  const counter = reactive({
+    count: initialCount,
+    increase,
+  });
+
+  return counter;
+
+  function increase() {
+    counter.count++;
+  }
+};
+```
+
+This patterns is very useful as the complexity of your state increases. Think about everything before the `return` as the `constructor` of a class, and everything after as the `methods` of a class. But there is no need for `this` references.
 
 ## Nesting and composing state
 
@@ -128,9 +174,9 @@ export const app = reactive({
 
 You explicitly set the new value when needed. And then you might say; "but this might go stale?". That is true, but is that a practical concern or a theoretical one? Also, `computed` recalculates as components consume the state, meaning the expensive computation happens during the rendering phase. You would rather want to have the freedom to run this expensive calculation when it makes sense.
 
-## Accessing parent state
+## Always pass parent state
 
-When nesting state you might need access to parent state. This can be achieved by using a `getter`:
+When nesting state you want to pass the parent state. This can be achieved by using a `getter`:
 
 ```ts
 import { reactive } from "bonsify";
@@ -158,6 +204,8 @@ export const createApp = () => {
   return app;
 };
 ```
+
+The reason you wanta to do this is so that any piece of state can back reference up to guaranteed higher level state. This will be especially important when accessing state in components.
 
 ## Persisting state
 
