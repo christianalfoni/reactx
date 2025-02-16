@@ -50,6 +50,10 @@ export const createCounter = (initialCount) =>
   });
 ```
 
+## Constructor thingy
+
+## Exposing immutable interface to React
+
 ## Nesting and composing state
 
 You will be building a state tree for all the state in your application and requires nesting state and composing state. Since this state tree is just a JavaScript object you use the language feature to nest and compose.
@@ -276,16 +280,16 @@ The mental model for promises is often that they act as a temporary primitive th
 
 ```ts
 // The promise is only there for as long as the data fetching runs
-const data = await fetchData()
+const data = await fetchData();
 ```
 
 But promises does not disappear when it is resolved, the promise IS the value. So you can also say:
 
 ```ts
 // The promise IS the value, it being on its way or has already arrived
-const asyncData = fetchData()
-const data = await asyncData
-const dataAgain = await asyncData
+const asyncData = fetchData();
+const data = await asyncData;
+const dataAgain = await asyncData;
 ```
 
 You can hold on to the promise and retrieve the value whenever you want. So for example we can have a promise of a counter and make it reactive:
@@ -297,14 +301,14 @@ export const app = reactive({
     // Just await the value to unwrap it
     const counter = await this.counter;
     counter.count++;
-  }    
+  },
 });
 
 // In a component
 function Counter() {
   // Use Reacts use hook to unwrap it, using suspense
-  const counter = use(app.counter)
+  const counter = use(app.counter);
 
-  return <div>{counter.count}</div>
+  return <div>{counter.count}</div>;
 }
 ```
