@@ -102,7 +102,7 @@ This patterns is very useful as the complexity of your state increases. Think ab
 
 ## Nesting and composing state
 
-You will be building a state tree for all the state in your application and requires nesting state and composing state. Since this state tree is just a JavaScript object you use the language feature to nest and compose.
+You will be building a state tree for all the state in your application which requires nesting state and composing state. Since this state tree is just a JavaScript object you use the language feature to nest and compose.
 
 ```ts
 import { reactive } from "bonsify";
@@ -205,7 +205,7 @@ export const createApp = () => {
 };
 ```
 
-The reason you wanta to do this is so that any piece of state can back reference up to guaranteed higher level state. This will be especially important when accessing state in components.
+The reason you want to do this is so that any piece of state can back reference up to guaranteed higher level state. This will be especially important when accessing state in components.
 
 ## Persisting state
 
@@ -265,7 +265,7 @@ export const app = reactive({
 
 ## Effects/Reactions
 
-The promise of the the effect/reaction is to execute code when a state change occurs. Even though this is an appealing concept it has a really bad side effect, indirection.
+The promise of an effect/reaction is to execute code when a state change occurs. Even though this is an appealing concept it has a really bad side effect, indirection.
 
 ```ts
 const state = {
@@ -298,7 +298,7 @@ Reactions and effects are fundamentally bad constructs for state management. The
 
 ## Guarantees and encapsulation
 
-Defaulting to strong guarantees and encapsulation typically slows down development. For example Redux requires you to create an action,dispatch it and then resolve an immutable state change within a reducer. This encapsulates the state and gives some guarantees, but it slows you down. With **bonsify** we rather subscribe to an open and accessible model, where you as a developer and team create guarantees and encapsulations where it makes sense. An example of this would be:
+Defaulting to strong guarantees and encapsulation typically slows down development. For example Redux requires you to create an action, dispatch it and then resolve an immutable state change within a reducer. This encapsulates the state and gives some guarantees, but it slows you down. With **bonsify** we rather subscribe to an open and accessible model, where you as a developer and team create guarantees and encapsulations where it makes sense. An example of this would be:
 
 ```ts
 const createItem = (data) => {
@@ -324,14 +324,14 @@ Now you have encapsulated the `data` of this item and created a guarantee that `
 
 You can choose to put promises into your state tree. This is especially valuable with React as you can suspend those promises in components. To make the value of a promise reactive, you just have to use the `reactive` primitive.
 
-The mental model for promises is often that they act as a temporary primitive that transfers a value from an asynchronous source and to you. Like:
+The mental model for promises is often that they act as a temporary primitive that transfers a value from an asynchronous source to you. Like:
 
 ```ts
 // The promise is only there for as long as the data fetching runs
 const data = await fetchData();
 ```
 
-But promises does not disappear when it is resolved, the promise IS the value. So you can also say:
+But promise does not disappear when it is resolved, the promise IS the value. So you can also say:
 
 ```ts
 // The promise IS the value, it being on its way or has already arrived
