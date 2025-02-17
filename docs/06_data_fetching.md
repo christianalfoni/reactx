@@ -4,7 +4,7 @@ There are primarily three types of data fetching you can do. They have different
 
 ### 1. Manual mutations
 
-Fetch data once and rather manually apply mutations to the data, where server mutations is a background process. This type of approach gives an incredibly snappy UX as there are absolutely no pending states for data changes and there are no reference changes causing unwanted reconciliation.
+Fetch data once and rather manually apply mutations to the data, where server mutations is a background process. This type of approach gives an incredibly snappy UX as there are no pending states for data changes and there are no reference changes causing unwanted reconciliation.
 
 ```ts
 const createData = (backend) => {
@@ -40,7 +40,7 @@ const createApp = (backend) => {
 
 ### 2. Revalidate on mutations
 
-Refetch data every time a mutation is performed. This type of approach gives a stronger guarantee that whenever the client makes a mutation the data will be synced with what is actually on the server. This stronger guarantee has a cost as by default all data references will change, meaning components are not able to compare what data references is still the same.
+Refetch data every time a mutation is performed. This type of approach gives a stronger guarantee that whenever the client makes a mutation the data will be synced with what is actually on the server. This stronger guarantee has a cost though. By default all data references will change on every mutation, meaning components are not able to compare what data references is still the same.
 
 ```ts
 const createData = (backend) => {
@@ -48,8 +48,7 @@ const createData = (backend) => {
     todos: [],
     async revalidateTodos() {
       try {
-        const todos = await backend.fetchTodos();
-        data.todos = todos;
+        data.todos = await backend.fetchTodos();
       } catch {}
     },
   });
@@ -114,11 +113,11 @@ const createApp = (backend) => {
 };
 ```
 
-Depending on the syncing solution the references of data will be kept during a sync, given a change has not happened, or all references will be updated.
+Depending on the syncing solution the references of data will be kept during a sync.
 
 ## Deriving data
 
-In the examples above we are exposing data directly to components, but you might want to rather derive data to some state management that exposes the data in a more controlled way to components.
+In the examples above we are exposing data directly to components, but you might want to rather derive data to some state management that exposes the data in a more controlled way .
 
 ```ts
 const createTodo = (data) =>
@@ -144,7 +143,7 @@ const createApp = () => {
 };
 ```
 
-Now we are hiding data from the components and gain control of how components interact with it. But there is a drawback to this. If your data optimally changes its own references only when it changes, we have broken that optimization by always creating a new state reference for every todo, regardless of the underlying data changing.
+Now we are hiding data from the components and gain control of how components interact with it.
 
 ## Optimize deriving data
 

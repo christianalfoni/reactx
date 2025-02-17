@@ -102,7 +102,7 @@ This patterns is very useful as the complexity of your state increases. Think ab
 
 ## Nesting and composing state
 
-You will be building a state tree for all the state in your application and requires nesting state and composing state. Since this state tree is just a JavaScript object you use the language feature to nest and compose.
+You will be building a state tree for all the state in your application and that requires nesting state and composing state. Since this state tree is just a JavaScript object you use the language feature to nest and compose.
 
 ```ts
 import { reactive } from "bonsify";
@@ -176,13 +176,14 @@ You explicitly set the new value when needed. And then you might say; "but this 
 
 ## Always pass parent state
 
-When nesting state you want to pass the parent state. This can be achieved by using a `getter`:
+When nesting state you want to pass and attach the parent state. This can be achieved by using a `getter`:
 
 ```ts
 import { reactive } from "bonsify";
 
 const createNested = (app) =>
   reactive({
+    app,
     get double() {
       return app.count * 2;
     },
@@ -205,7 +206,7 @@ export const createApp = () => {
 };
 ```
 
-The reason you wanta to do this is so that any piece of state can back reference up to guaranteed higher level state. This will be especially important when accessing state in components.
+The reason you wanta to do this is so that any piece of state can traverse up the state tree. This will be especially important when accessing state in components.
 
 ## Persisting state
 
@@ -294,37 +295,34 @@ const state = {
 
 Reactions and effects are fundamentally bad constructs for state management. They do not improve your understanding of how your code executes and are not necessary. Even in scenarios where the `count` could change from multiple places and you want to centralise the log statement the indirection is not worth it, rather lift the logic into a function that changes the count and does the log.
 
-> This mechanism is what enables components to observe changes and reconcile. Deriving state into UI makes a lot of sense, but managing state in and of itself becomes confusing
+> This mechanism is what enables components to observe changes and reconcile. Deriving state into UI makes a lot of sense, but managing state with reactions becomes confusing
 
 ## Guarantees and encapsulation
 
 Defaulting to strong guarantees and encapsulation typically slows down development. For example Redux requires you to create an action,dispatch it and then resolve an immutable state change within a reducer. This encapsulates the state and gives some guarantees, but it slows you down. With **bonsify** we rather subscribe to an open and accessible model, where you as a developer and team create guarantees and encapsulations where it makes sense. An example of this would be:
 
 ```ts
-const createItem = (data) => {
-  const reactiveData = reactive(data);
-
-  return {
+const createItem = (data) =>
+  reactive({
     get id() {
-      return reactiveData.id;
+      return data.id;
     },
     get completed() {
-      return reactiveData.completed;
+      return data.completed;
     },
     toggle() {
-      reactiveData.completed = !reactivedata.completed;
+      data.completed = !data.completed;
     },
-  };
-};
+  });
 ```
 
 Now you have encapsulated the `data` of this item and created a guarantee that `toggle` has to be called to change the `completed` state of that data.
 
 ## Promises
 
-You can choose to put promises into your state tree. This is especially valuable with React as you can suspend those promises in components. To make the value of a promise reactive, you just have to use the `reactive` primitive.
+You can choose to put promises into your state tree. This is especially valuable with React as you can suspend those promises in components.
 
-The mental model for promises is often that they act as a temporary primitive that transfers a value from an asynchronous source and to you. Like:
+The mental model for promises is often that they act as a temporary primitive that transfers a value from an asynchronous source and into a variable. Like:
 
 ```ts
 // The promise is only there for as long as the data fetching runs
@@ -334,7 +332,6 @@ const data = await fetchData();
 But promises does not disappear when it is resolved, the promise IS the value. So you can also say:
 
 ```ts
-// The promise IS the value, it being on its way or has already arrived
 const asyncData = fetchData();
 const data = await asyncData;
 const dataAgain = await asyncData;

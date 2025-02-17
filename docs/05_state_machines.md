@@ -16,7 +16,7 @@ import { reactive } from "bonsify";
 // We create our machine by defining functions transitioning to
 // the explicit states. The state functions close over the object
 // representing the state. You can do whatever you want there, like
-// starting handling side effects
+// starting an interval
 function createCounter() {
   const counter = reactive({
     state: IDLE(),
@@ -27,7 +27,7 @@ function createCounter() {
 
   function IDLE() {
     return {
-      mode: "IDLE",
+      current: "IDLE",
       start() {
         counter.state = COUNTING();
       },
@@ -40,7 +40,7 @@ function createCounter() {
     }, 1000);
 
     return {
-      mode: "COUNTING",
+      current: "COUNTING",
       stop() {
         clearInterval(interval);
         counter.state = IDLE();
