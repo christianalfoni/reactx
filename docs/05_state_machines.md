@@ -18,32 +18,35 @@ import { reactive } from "bonsify";
 // representing the state. You can do whatever you want there, like
 // starting handling side effects
 function createCounter() {
-  const IDLE = () => ({
-    mode: "IDLE",
-    start() {
-      counter.state = COUNTING()
-    },
-  });
-  const COUNTING = () => {
-    const interval = setInterval(() => {
-      counter.count++
-    }, 1000)
-
-    return ({
-      mode: "COUNTING",
-      stop() {
-        clearInterval(interval)
-        counter.state = IDLE()
-      },
-    })
-  };
-
   const counter = reactive({
     state: IDLE(),
-    count: 0
+    count: 0,
   });
 
   return counter;
+
+  function IDLE() {
+    return {
+      mode: "IDLE",
+      start() {
+        counter.state = COUNTING();
+      },
+    };
+  }
+
+  function COUNTING() {
+    const interval = setInterval(() => {
+      counter.count++;
+    }, 1000);
+
+    return {
+      mode: "COUNTING",
+      stop() {
+        clearInterval(interval);
+        counter.state = IDLE();
+      },
+    };
+  }
 }
 
 const app = reactive({
