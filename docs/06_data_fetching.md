@@ -148,7 +148,7 @@ Now we are hiding data from the components and gain control of how components in
 
 ## Optimize binding of data to state
 
-Binding data to state works for all data fetching solutions. But if the data fetching solution ensures consistent data references when no changes are made, we miss out on an optimiation. When components render lists and passes items to nested components you typically use `memo` to avoid non changing items to reconcile when other items in the list changes. When we `map` over the todos in `get todos` in this example we will always generate new references for the state, even though the data it wraps did not change its reference. You can avoid this by creating a **reference cache**, as shown here with full typing:
+Binding data to state works for all data fetching solutions. But if the data fetching solution ensures consistent data references when no changes are made, we miss out on an optimization. When components render lists and pass items to nested components you typically use `memo` to avoid non changing items to reconcile when other items in the list changes. When we `map` over the todos in `get todos` in this example we will always generate new references for the state, even though the data it wraps did not change its reference. You can avoid this by creating a **reference cache**, as shown here with full typing:
 
 ```ts
 function createReferenceCache<R extends object, S>(create: (ref: D) => S) {
