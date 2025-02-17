@@ -17,19 +17,6 @@ export const counter = reactive({
 
 Ideally we would not need any primitive at all, but the JavaScript language currently does not provide any mechanism to create objects that can be observed for changes.
 
-When pointing to state to read it or make changes you need to point to the reactive reference. Using `this` will **always** point to the reactive reference, but when pointing to variables those variables needs to be `reactive`.
-
-```ts
-import { reactive } from "bonsify";
-
-export const counter = reactive({
-  count: 0,
-  increase() {
-    counter.count++;
-  },
-});
-```
-
 ## Constructing state
 
 To go beyond just defining state, you can construct it. Plain objects does not have constructors like classes, but you can get the same functionality by simply creating a function.
