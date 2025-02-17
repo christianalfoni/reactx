@@ -116,9 +116,9 @@ const createApp = (backend) => {
 
 Depending on the syncing solution the references of data will be kept during a sync, given a change has not happened, or all references will be updated.
 
-## Bind data to state
+## Deriving data
 
-In the examples above we are exposing data directly to components, but you might want to rather wrap data with some state management. For example:
+In the examples above we are exposing data directly to components, but you might want to rather derive data to some state management that exposes the data in a more controlled way to components.
 
 ```ts
 const createTodo = (data) =>
@@ -144,11 +144,11 @@ const createApp = () => {
 };
 ```
 
-Now we are hiding data from the components and gain control of how components interact with it.
+Now we are hiding data from the components and gain control of how components interact with it. But there is a drawback to this. If your data optimally changes its own references only when it changes, we have broken that optimization by always creating a new state reference for every todo, regardless of the underlying data changing.
 
-## Optimize binding of data to state
+## Optimize deriving data
 
-Binding data to state works for all data fetching solutions. But if the data fetching solution ensures consistent data references when no changes are made, we miss out on an optimiation. When components render lists and passes items to nested components you typically use `memo` to avoid non changing items to reconcile when other items in the list changes. When we `map` over the todos in `get todos` in this example we will always generate new references for the state, even though the data it wraps did not change its reference. You can avoid this by creating a **reference cache**, as shown here with full typing:
+When components render lists and passes items to nested components you typically use `memo` to avoid non changing items to reconcile when other items in the list changes. When we `map` over the todos in `get todos` in the example above we will always generate new references for the state, even though the data it wraps did not change its reference. You can avoid this by creating a **reference cache**, as shown here with full typing:
 
 ```ts
 function createReferenceCache<R extends object, S>(create: (ref: D) => S) {
