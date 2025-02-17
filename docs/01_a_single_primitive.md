@@ -17,7 +17,7 @@ For several years I have been obsessing about state management. Specifically sta
 
 To manage the complexity of interactions I was using Angular JS with a root scope pattern. It allowed me to share state and functions to change that state across the app without friction. Even though at the time I was just trying to find the path of least resistance to get my ideas working, 10 years later I can reflect back on learning two very important lessons:
 
-1. Angular JS introduced me to think about my application as a state tree, a state tree the the UI derived from
+1. Angular JS introduced me to think about my application as a state tree, a state tree the UI could derive from
 2. Angular JS allowed me to use plain JavaScript to express state and changes to state
 
 When React came on the scene shortly after it got my attention. The concept of components and JSX was a big deal. You would be able to use JavaScript to express the dynamic nature of the UI. This is an amazing concept, but unlike Angular JS dirty checking, React depends on immutability. The result of this is that we needed abstractions to make our state and state changes immutable. Instead of:
