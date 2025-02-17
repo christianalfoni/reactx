@@ -98,7 +98,7 @@ export const createCounter = (initialCount) => {
 };
 ```
 
-This patterns is very useful as the complexity of your state increases. Think about everything before the `return` as the `constructor` of a class, and everything after as the `methods` of a class. But there is no need for `this` references.
+This patterns is very useful as the complexity of your state increases. Think about everything before the `return` as the `constructor` of a class, and everything after as the `methods` of a class. But there is no need for `this` references our binding methods to `this`, it is all within the closure.
 
 ## Nesting and composing state
 

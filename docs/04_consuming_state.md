@@ -18,4 +18,4 @@ const state = createState();
 render(<App state={state} />);
 ```
 
-As your components narrows down on specific state, also pass the related narrowed state down as props. Your components can always reference back up the state tree no matter how deep they are. Passing these props has no effect on performance as they are mutable.
+As your components narrows down on specific state, also pass the related narrowed state down as props. Your components can always reference back up the state tree no matter how deep they are. Passing these state branches as props has no effect on performance as they do not change reference unles the whole branch is replaced/removed.
