@@ -220,6 +220,8 @@ export const createApp = (utils) => {
 };
 ```
 
+You can still use classes, maps, sets etc., but these can be created and referenced within the function returning the reactive state. Your state should primarily be thought of as JSON.
+
 ## Disposing state
 
 You might initialize state that creates a side effect that needs to be disposed of when you later remove the state.
