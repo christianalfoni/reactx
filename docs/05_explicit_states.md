@@ -37,7 +37,7 @@ type SessionState =
   | SessionAuthenticating;
 ```
 
-At its core we put state and related functionality behind an explicit state. This has several benefits:
+This has several benefits:
 
 - The explicit states is a string that describes that actual state
 - With TypeScript you can narrow down what values are available in each state and you can exhaust what states are available
