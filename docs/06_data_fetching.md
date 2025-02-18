@@ -1,10 +1,10 @@
 # Data Fetching
 
-There are primarily three types of data fetching you can do. They have different performance characteristic and approaches to mutations.
+Data is to some extent also state. The difference is that we need to asynchronously fetch the initial data and making changes to that data also requires an asynchronous process. There are primarily three different strategies to manage this.
 
 ### 1. Manual mutations
 
-Fetch data once and rather manually apply mutations to the data, where server mutations is a background process. This type of approach gives an incredibly snappy UX as there are no pending states for data changes and there are no reference changes causing unwanted reconciliation.
+Fetch data once and rather manually apply mutations to the data, where server mutations is a background process.
 
 ```ts
 const createData = (backend) => {
@@ -40,7 +40,7 @@ const createApp = (backend) => {
 
 ### 2. Revalidate on mutations
 
-Refetch data every time a mutation is performed. This type of approach gives a stronger guarantee that whenever the client makes a mutation the data will be synced with what is actually on the server. This stronger guarantee has a cost though. By default all data references will change on every mutation, meaning components are not able to compare what data references is still the same.
+Refetch data every time a mutation is performed. This type of approach gives a stronger guarantee that whenever the client makes a mutation the data will be synced with what is actually on the server.
 
 ```ts
 const createData = (backend) => {
@@ -113,7 +113,15 @@ const createApp = (backend) => {
 };
 ```
 
-Depending on the syncing solution the references of data will be kept during a sync.
+## Data references
+
+When you fetch a list of todos, the array of those todos and each todo has a reference. In the world of React those references matter, because it is what `memo` components use to determine if the component needs to reconcile. The pattern of mapping an array in a component and render a nested `memo` component is the most common optimization in React.
+
+If you use a revalidation approach to data fetching it means that the todos array and each todo in that array will change reference whenever you make any change to the array or any item in the array. In other words your `TodosList` component and every `Todo` component will reconcile regardless of any use of `memo`.
+
+Normally this is no concern as reconciliation is fast. But if you are displaying a lot of todos where each todo has a complex UI you risk performance issues.
+
+**Manual mutations** strategy is what best optimises references and therefor reconciliation. After that **Automatic sync** where you subscribe to specific changes in the data also best optimises references and therefor reconciliation. Make sure you reflect on how your data fetching affects your data references and the reconciliation of components. It can be a good idea to default to **Revalidate on mutations**, but optimise with **Custom mutation** or a change subscription if possible.
 
 ## Deriving data
 
@@ -145,9 +153,20 @@ const createApp = () => {
 
 Now we are hiding data from the components and gain control of how components interact with it.
 
-## Optimize deriving data
+## Deriving data references
 
-When components render lists and passes items to nested components you typically use `memo` to avoid non changing items to reconcile when other items in the list changes. When we `map` over the todos in `get todos` in the example above we will always generate new references for the state, even though the data it wraps did not change its reference. You can avoid this by creating a **reference cache**, as shown here with full typing:
+If our data fetching ensures consistency in data references we break that consistency when deriving.
+
+```ts
+export const createApp = (data) =>
+  reactive({
+    get todos() {
+      return data.todos.map(createTodo);
+    },
+  });
+```
+
+Even if our `data.todos` ensures consistent references our `map` and `createTodo` will always create a new array and new state objects in that array. To make sure the `createTodo` statae object is only created when the underlying `todo` actually changes we can use a reference cache:
 
 ```ts
 function createReferenceCache<R extends object, S>(create: (ref: D) => S) {
@@ -193,4 +212,4 @@ const createApp = () => {
 };
 ```
 
-When calling `createCachedTodo` it will first check if the data reference is in the `WeakMap`, if so, it returns the existing state. If not, it creates the state as normal and caches it. Using a `WeakMap` is great because we do not have to clean up the cache. When the data reference is no longer available, the state removes itself.
+When calling `createCachedTodo` it will first check if the data reference is in the `WeakMap`, if so, it returns the existing state. If not, it creates the state as normal and caches it. Using a `WeakMap` is perfect because we do not have to clean up the cache. When the data reference is no longer available, the state removes itself.
