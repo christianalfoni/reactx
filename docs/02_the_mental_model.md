@@ -34,8 +34,8 @@ const state = {
 
 It does no matter what source your UI derives its state from, it being from a DOM element, component, a parent component, a context, a global state store or wherever. At any point when you look at the UI of your application you can imagine a state tree where it derived its state from.
 
-And this is exactly what components gave us. They gave us the ability to look at a UI and mentally draw rectangles around sections, reason about the encapsulations of UI code and find directories and files that to some degree reflects that mental model.
+And this is exactly what components gave us. They gave us the mental model to look at a UI and find directories, files and code that to some degree reflects that mental model.
 
-But this is not the case for state. If the application has many components where some state originates from the component, some state is passed as props from parent components, maybe some state in a context and some in a global state store, you will have a much harder time reasoning about the encapsulations of state and find directories and files that to some degree reflects that mental model.
+But this is not the case for state. If the application has many components where some state originates from the component, some state is passed as props from parent components, maybe some state in a context and some in a global state store, you will have a much harder time finding a match between your mental model and directories, files and code reflecting that mental model.
 
-With **bonsify** you think about your application state as a state tree. That means the state tree you derive from looking at the UI of the application will have similar encapsulations, directories and files in the codebase.
+With **bonsify** you think about your application state as a state tree. That means the state tree you derive from looking at the UI of the application will have similar directories, files and code.
