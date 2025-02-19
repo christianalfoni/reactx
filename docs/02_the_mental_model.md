@@ -18,7 +18,6 @@ And the same goes for the state and related functionality. You have no idea what
 const state = {
   filter: "all",
   newTodoTitle: "",
-  editTodoTitle: "",
   todos: [
     {
       title: "bring back the fun",
@@ -29,7 +28,6 @@ const state = {
   addTodo() {},
   setFilter() {},
   toggleCompleted() {},
-  editTodo() {},
   removeTodo() {},
 };
 ```
@@ -38,6 +36,6 @@ It does no matter what source your UI derives its state from, it being from a DO
 
 And this is exactly what components gave us. They gave us the ability to look at a UI and mentally draw rectangles around sections, reason about the encapsulations of UI code and find directories and files that to some degree reflects that mental model.
 
-But this is not the case for state. If the application has many components where some state originates from the component, some state is passed as props from parent components, maybe some state in a context and some in a global state store, you will have a much harder time reasoning about the encapsulations of state code and find directories and files that to some degree reflects that mental model.
+But this is not the case for state. If the application has many components where some state originates from the component, some state is passed as props from parent components, maybe some state in a context and some in a global state store, you will have a much harder time reasoning about the encapsulations of state and find directories and files that to some degree reflects that mental model.
 
 With **bonsify** you think about your application state as a state tree. That means the state tree you derive from looking at the UI of the application will have similar encapsulations, directories and files in the codebase.
