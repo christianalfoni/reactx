@@ -1,6 +1,6 @@
 # Data Fetching
 
-Data is also state. The difference between data and regular state is that we need to asynchronously fetch the initial data and making changes to that data needs to be synced with the server. There are primarily three different strategies to manage this.
+Data is also state. The difference between data and regular state is that we need to asynchronously fetch the initial state and making changes to that state needs to be synced with the server, called mutations. There are primarily three different strategies to manage this.
 
 ### 1. Manual mutations
 
