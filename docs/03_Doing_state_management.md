@@ -1,4 +1,4 @@
-# Creating state
+# Doing state management
 
 How can you possibly do any state management with a single primitive of `reactive`? Well, there is this magical construct we tend to forget when solving problems with abstractions... the language itself.
 
@@ -85,7 +85,7 @@ export const createCounter = (initialCount) => {
 };
 ```
 
-This patterns is very useful as the complexity of your state increases. Think about everything before the `return` as the `constructor` of a class, and everything after as the `methods` of a class. But unlike a class there is no `this` reference, you just point directly to variables and functions you want to use.
+This patterns is very useful as the complexity of your state increases. Think about everything before the `return` as the `constructor` of a class, and everything after as the `methods` of a class. But unlike a class there is no `this` reference, you just point directly to any dependencies, variables or functions you want to use.
 
 ## Nesting and composing state
 
@@ -328,7 +328,7 @@ const dataAgain = await asyncData;
 
 You can hold on to the promise and retrieve the value whenever you want. So for example we can have a promise of a counter and make it reactive:
 
-```ts
+```tsx
 export const app = reactive({
   counter: fetchCounter().then(reactive),
   async increase() {
