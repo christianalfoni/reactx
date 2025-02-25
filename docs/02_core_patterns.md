@@ -1,10 +1,10 @@
 # Core Patterns
 
-State management at its core is about constructing objects that holds state and behavior. This state needs to be reactive for components to be able to observe changes.
+State management at its core is about creating an interface to consume state and behaviors. With React this interface needs to be reactive, so any changes to state accessed by a component will cause the component to reconcile.
 
-## Reactive state
+## Reactive state management
 
-You can make any object reactive. Consuming reactive objects in components makes them optimally reconcile when what they access from the object changes.
+You can make any interface reactive, here showing a simple counter.
 
 ```ts
 import { reactive } from "bonsify";
@@ -95,7 +95,7 @@ This pattern is very useful as the complexity increases. Think about everything 
 
 ## Nesting and composing
 
-Separating objects and factories and composing them back together makes your code more readable, increases reusability and improves testability.
+Separating factories and composing them back together makes your code more readable, increases reusability and improves testability.
 
 You can compose by simply:
 
@@ -113,21 +113,24 @@ function createCounter() {
   return counter;
 }
 
-export const state = reactive({
-  counter: createCounter(),
-});
+export function createState() {
+  const state = reactive({
+    counter: createCounter(),
+  });
+
+  return state;
+}
 ```
 
 ## Passing parent references
 
-When nesting state it can be useful to pass the parent reference. This can be achieved by using a `getter`. Also attaching the parent reference to the nested state itself is useful as components can more easily walk back up the state if needed.
+When nesting objects it can be useful to pass the parent reference. This can be achieved by using a `getter`.
 
 ```ts
 import { reactive } from "bonsify";
 
 function createDoubler(counter) {
   const doubler = reactive({
-    counter,
     get double() {
       return counter.count * 2;
     },
@@ -143,7 +146,7 @@ export function createCounter() {
       return doubler;
     },
     increase() {
-      this.count++;
+      counter.count++;
     },
   });
 
@@ -220,6 +223,7 @@ function createCounter() {
 
 export function createState() {
   const state = reactive({
+    counter: undefined,
     createCounter() {
       state.counter = createCounter();
     },
@@ -238,12 +242,12 @@ export function createState() {
 The promise of the the effect/reaction is to execute code when a state change occurs. Even though this is an appealing concept it has a really bad side effect, indirection.
 
 ```ts
-const state = {
+const state = reactive({
   count: 0,
   increase() {
-    this.count++;
+    state.count++;
   },
-};
+});
 
 effect(() => {
   console.log(state.count);
@@ -253,13 +257,13 @@ effect(() => {
 Whenever the `count` changes, the log statement appears. Indirection in this context means that when reading the `increase` code there is no way to know that it will also cause a log statement to happen. Reading the effect code you do not know where the `count` changes. As opposed to:
 
 ```ts
-const state = {
+const state = reactive({
   count: 0,
   increase() {
-    this.count++;
-    console.log(this.count);
+    state.count++;
+    console.log(state.count);
   },
-};
+});
 ```
 
 Reactions and effects are fundamentally bad constructs for state management. They do not improve your understanding of how your code executes and are not necessary. Even in scenarios where the `count` could change from multiple places and you want to centralise the log statement the indirection is not worth it, rather lift the logic into a function that changes the count and does the log.
@@ -289,43 +293,3 @@ function createItem(data) {
 ```
 
 Now you have encapsulated the `data` of this item and created a guarantee that `toggle` has to be called to change the `completed` state of that data.
-
-## Promises
-
-You can choose to put promises into your state tree. This is especially valuable with React as you can suspend those promises in components.
-
-The mental model for promises is often that they act as a temporary primitive that transfers a value from an asynchronous source and into a variable. Like:
-
-```ts
-// The promise is only there for as long as the data fetching runs
-const data = await fetchData();
-```
-
-But promises does not disappear when it is resolved, the promise IS the value. So you can also say:
-
-```ts
-const asyncData = fetchData();
-const data = await asyncData;
-const dataAgain = await asyncData;
-```
-
-You can hold on to the promise and retrieve the value whenever you want. So for example we can have a promise of a counter and make it reactive:
-
-```tsx
-export const app = reactive({
-  counter: fetchCounter().then(reactive),
-  async increase() {
-    // Just await the value to unwrap it
-    const counter = await this.counter;
-    counter.count++;
-  },
-});
-
-// In a component
-function Counter() {
-  // Use Reacts use hook to unwrap it, using suspense
-  const counter = use(app.counter);
-
-  return <div>{counter.count}</div>;
-}
-```

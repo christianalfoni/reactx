@@ -1,13 +1,13 @@
 # Data Fetching
 
-Data is also state. The difference between data and regular state is that we need to asynchronously fetch the initial state and making changes to that state needs to be synced with the server, often reffered to as server mutations. There are primarily three different strategies to manage this.
+Data is also state. The difference between data and regular state is that we need to asynchronously fetch the initial state. Making changes to that state needs to be synced with the server, often reffered to as server mutations. There are primarily three different strategies to manage this.
 
 ### 1. Local mutations
 
 Fetch data once and rather manually apply local mutations to the data, where server mutations is a background process.
 
 ```ts
-const createData = (backend) => {
+function createData(backend) {
   const data = reactive({
     todos: [],
   });
@@ -15,13 +15,13 @@ const createData = (backend) => {
   backend.fetchTodos().then((todos) => (data.todos = todos));
 
   return data;
-};
+}
 ```
 
 In this type of data handling you can just toggle the `completed` state of any todo, push new todos on to the existing data array etc.
 
 ```ts
-const createApp = (backend) => {
+function createApp(backend) {
   const data = createData(backend);
 
   const app = reactive({
@@ -35,15 +35,15 @@ const createApp = (backend) => {
   });
 
   return app;
-};
+}
 ```
 
 ### 2. Revalidate on mutations
 
-Refetch data after a server mutation is performed that affects the integrity of that data. This type of approach gives a stronger guarantee that whenever the client requests a server mutation the data will be synced with what is actually on the server.
+Refetch data after a server mutation is performed. This type of approach gives a stronger guarantee that whenever the client requests a server mutation the data will be synced with what is actually on the server.
 
 ```ts
-const createData = (backend) => {
+function createData(backend) {
   const data = reactive({
     todos: [],
     async revalidateTodos() {
@@ -56,14 +56,14 @@ const createData = (backend) => {
   data.revalidateTodos();
 
   return data;
-};
+}
 ```
 
 ```ts
-const createApp = (backend) => {
+function createState(backend) {
   const data = createData(backend);
 
-  const app = reactive({
+  const state = reactive({
     get todos() {
       return data.todos;
     },
@@ -73,8 +73,8 @@ const createApp = (backend) => {
     },
   });
 
-  return app;
-};
+  return state;
+}
 ```
 
 ### 3. Automatic sync
@@ -82,7 +82,7 @@ const createApp = (backend) => {
 Subscribe to data and get updates automatically. This type of approach simplifies data fetching and server mutations as you only interact with the server, there is no manual intermediate step to keep data in sync.
 
 ```ts
-const createData = (backend) => {
+function createData(backend) {
   const data = reactive({
     todos: [],
   });
@@ -92,14 +92,14 @@ const createData = (backend) => {
   });
 
   return data;
-};
+}
 ```
 
 ```ts
-const createApp = (backend) => {
+function createState(backend) {
   const data = createData(backend);
 
-  const app = reactive({
+  const state = reactive({
     get todos() {
       return data.todos;
     },
@@ -109,15 +109,15 @@ const createApp = (backend) => {
     },
   });
 
-  return app;
-};
+  return state;
+}
 ```
 
 ## Data references
 
 When you fetch a list of todos, the array of those todos and each todo has a reference. In the world of React those references matter, because it is what `memo` components use to determine if the component needs to reconcile. The pattern of mapping an array and render nested `memo` components is the most common optimization in React.
 
-If you use a revalidation approach to data fetching it means that the todos array and each todo in that array will change reference whenever you request any change to the array or any item in the array. In other words your `TodosList` component and every `Todo` component will reconcile regardless of any change and using `memo` does nothing.
+If you use a revalidation approach to data fetching it means that the todos array and each todo in that array will change reference whenever you request any change to the array or any item in the array. In other words your `TodosList` component and every `Todo` component will reconcile regardless of any change.
 
 Normally this is no concern as reconciliation is fast. But if you are displaying a lot of todos where each todo has a complex UI you risk performance issues.
 
@@ -125,11 +125,11 @@ Normally this is no concern as reconciliation is fast. But if you are displaying
 
 ## Deriving data
 
-In the examples above we are exposing data directly to components, but you might want to rather derive data to some state management that exposes the data in a more controlled way .
+In the examples above we are exposing data directly to components, but you might want to rather derive data to some state management that exposes the data in a more controlled way.
 
 ```ts
-const createTodo = (data) =>
-  reactive({
+function createTodo(data) {
+  const todo = reactive({
     get id() {
       return data.id;
     },
@@ -138,17 +138,20 @@ const createTodo = (data) =>
     },
   });
 
-const createApp = () => {
+  return todo;
+}
+
+function createState() {
   const data = createData();
 
-  const app = reactive({
+  const state = reactive({
     get todos() {
       return data.todos.map(createTodo);
     },
   });
 
-  return app;
-};
+  return state;
+}
 ```
 
 Now we are hiding data from the components and gain control of how components interact with it.
@@ -158,15 +161,18 @@ Now we are hiding data from the components and gain control of how components in
 If our data fetching ensures the integrety of data references we break that integrity when deriving.
 
 ```ts
-export const createApp = (data) =>
-  reactive({
+export function createState(data) {
+  const state = reactive({
     get todos() {
       return data.todos.map(createTodo);
     },
   });
+
+  return state;
+}
 ```
 
-Even if our `data.todos` ensures consistent references our `map` and `createTodo` will always create a new array and new state objects in that array. To make sure the `createTodo` state object is only created when the underlying `todo` data reference actually changes we can use a reference cache:
+Even if our `data.todos` ensures consistent references our `map` and `createTodo` will always create a new array and new state objects in that array. To make sure the `createTodo` state object is only created when the underlying `todo` data reference actually changes, we can use a reference cache:
 
 ```ts
 function createReferenceCache<R extends object, S>(create: (ref: D) => S) {
@@ -188,8 +194,8 @@ function createReferenceCache<R extends object, S>(create: (ref: D) => S) {
 Let us see it in action:
 
 ```ts
-const createTodo = (data) =>
-  reactive({
+function createTodo(data) {
+  const todo = reactive({
     get id() {
       return data.id;
     },
@@ -198,17 +204,20 @@ const createTodo = (data) =>
     },
   });
 
-const createApp = () => {
+  return todo;
+}
+
+const createState()  {
   const data = createData();
   const createCachedTodo = createReferenceCache(createTodo);
 
-  const app = reactive({
+  const state = reactive({
     get todos() {
       return data.todos.map(createCachedTodo);
     },
   });
 
-  return app;
+  return state;
 };
 ```
 
