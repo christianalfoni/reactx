@@ -1,25 +1,10 @@
-# Core Patterns
+# Building state management
 
-State management at its core is about creating an interface to consume state and behaviors. With React this interface needs to be reactive, so any changes to state accessed by a component will cause the component to reconcile.
+You do not have to go far to create a mental model for building up your state management. You can actually think about components. But instead of creating functions that returns JSX, you create functions that returns state and behavior. You will still compose, pass props, use refs and build up a tree.
 
-## Reactive state management
+But instead of fusing state and behavior with your UI components and the reconciliation loop, we create a separate tree that can operate outside of your specific UI implementation. This increases readability, flexibility, maintainability and testability.
 
-You can make any interface reactive, here showing a simple counter.
-
-```ts
-import { reactive } from "bonsify";
-
-export const counter = reactive({
-  count: 0,
-  increase() {
-    counter.count++;
-  },
-});
-```
-
-## Factories
-
-Classes are great for constructing objects and organizing related state and behaviors. If you prefer using classes, please do, but the factory pattern gives you the same benefits with less keywords and concepts.
+## Creating a component of state and behavior
 
 ```ts
 import { reactive } from "bonsify";
@@ -36,12 +21,12 @@ export function createCounter() {
 }
 ```
 
-Now you can pass in dependencies:
+Just like a component you can pass in props:
 
 ```ts
 import { reactive } from "bonsify";
 
-export function createCounter(initialCount) {
+export function createCounter({ initialCount }) {
   const counter = reactive({
     count: initialCount,
     increase() {
@@ -53,12 +38,12 @@ export function createCounter(initialCount) {
 }
 ```
 
-You can define private variables:
+You can define refs, or variables:
 
 ```ts
 import { reactive } from "bonsify";
 
-export function createCounter(initialCount) {
+export function createCounter({ initialCount }) {
   const count = initialCount || 10;
 
   const counter = reactive({
@@ -77,9 +62,11 @@ You can separate behavior from state:
 ```ts
 import { reactive } from "bonsify";
 
-export function createCounter(initialCount) {
+export function createCounter({ initialCount }) {
+  const count = initialCount || 10;
+
   const counter = reactive({
-    count: initialCount,
+    count,
     increase,
   });
 
@@ -91,11 +78,11 @@ export function createCounter(initialCount) {
 }
 ```
 
-This pattern is very useful as the complexity increases. Think about everything before the `return` as the `constructor` of a class, and everything after as the `methods` of a class. But unlike a class there is no `this` reference, you just point directly to any dependencies, variables or functions you want to use.
+This last example is the official **Bonsify** state and behavior component pattern. Everything before the `return` is your state and everything after is the behavior. Feel free to apply this to your React components as well.
 
 ## Nesting and composing
 
-Separating factories and composing them back together makes your code more readable, increases reusability and improves testability.
+Just like components you can separate your state management into separate pieces and composing them back together to make your code more readable, increase reusability and improve testability.
 
 You can compose by simply:
 
@@ -124,12 +111,12 @@ export function createState() {
 
 ## Passing parent references
 
-When nesting objects it can be useful to pass the parent reference. This can be achieved by using a `getter`.
+When nesting state and behavior it can be useful to pass the parent reference. This can be achieved by using a `getter`.
 
 ```ts
 import { reactive } from "bonsify";
 
-function createDoubler(counter) {
+function createDoubler({ counter }) {
   const doubler = reactive({
     get double() {
       return counter.count * 2;
@@ -150,15 +137,13 @@ export function createCounter() {
     },
   });
 
-  const doubler = createDoubler(counter);
+  const doubler = createDoubler({ counter });
 
   return counter;
 }
 ```
 
 ## Deriving state
-
-JavaScript has a concept of deriving state in objects:
 
 ```ts
 import { reactive } from "bonsify";
@@ -203,7 +188,7 @@ You explicitly set the new value when needed. And then you might say; "but this 
 
 ## Disposing state
 
-You might initialize state that creates a side effect that needs to be disposed of when you later remove the state.
+Just like `useEffect` can subscribe and usubscribe, you might initialize state that needs to have similar behavior.
 
 ```ts
 function createCounter() {
