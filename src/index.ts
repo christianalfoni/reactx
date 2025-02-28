@@ -228,6 +228,9 @@ export function reactive<T extends Record<string, any>>(value: T): T {
       const isAccessingArray = Array.isArray(result);
 
       if (isAccessingArray) {
+        // We observe the prop as normal as it can be replaced
+        getCurrentObserver()?.observe(target, key);
+        // But we also observe the array itself to track mutations
         getCurrentObserver()?.observe(result);
 
         return createArrayProxy(result);

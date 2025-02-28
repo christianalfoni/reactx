@@ -20,4 +20,10 @@ export const createApp = (utils: Utils) =>
         })
       );
     },
+    clearItemsBySettingLengthTo0() {
+      this.items.length = 0;
+    },
+    clearItemsBySettingArrayToEmpty() {
+      this.items = reactive([]);
+    },
   });
