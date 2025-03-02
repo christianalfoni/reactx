@@ -1,4 +1,4 @@
-# Promises
+# Pattern: Promises
 
 You can choose to put promises into your state. This is especially valuable with React as you can suspend those promises in components.
 
@@ -20,21 +20,23 @@ const dataAgain = await asyncDataPromise;
 You can hold on to the promise and retrieve the value whenever you want. So for example we can have a promise of a counter and make it reactive:
 
 ```tsx
-export function createState() {
-  const state = reactive({
-    counter: fetchCounter().then(reactive),
-    async increase() {
-      // Just await the value to unwrap it
-      const counter = await state.counter;
-      counter.count++;
-    },
-  });
+export function State() {
+  const counter = fetchCounter().then(reactive);
 
-  return state;
+  return {
+    counter,
+    increase,
+  };
+
+  async function increase() {
+    // Just await the value to unwrap it
+    const counter = await state.counter;
+    counter.count++;
+  }
 }
 
 // In a component
-function Counter() {
+function Counter({ state }) {
   // Use Reacts use hook to unwrap it, using suspense
   const counter = use(state.counter);
 

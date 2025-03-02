@@ -1,7 +1,7 @@
 {
   "name": "bonsify",
   "version": "0.2.3",
-  "description": "Well-structured, artfully maintained state without the bloat of unnecessary abstractions.",
+  "description": "Patterns for well-structured, artfully maintained components and state without the bloat of unnecessary abstractions.",
   "keywords": [
     "state",
     "management",

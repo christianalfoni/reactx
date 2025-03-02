@@ -1,26 +1,20 @@
-# Exposing state to components
-
-**Bonsify** makes observation transparent. With the included babel/swc plugin any component function defined in your codebase will become observers. That means you do not have to think about adding observation or worry about props passing etc. The observation memory footprint is tiny and saves you from a lot of reconciliation work as components will only reconcile by the state they observe. Additionally these observing components uses `memo` as your props passing will mostly be with state references, which are non changing references.
-
-## Creating a contract between state and components
+# Pattern: Component State Contract
 
 With state management solutions you often consume root state through a context provider and use selectors to narrow down to the specific state you want to consume. Problems arises if you use TypeScript and your state is at some level dynamic. A value can be there or it might not be there.
 
-For example a component might want access to a user, but the user might be `null`. If the user is passed as a prop, it is guaranteed it will be there. But if it is consumed by a selector hook, you can not give that same guarantee.
+For example a component might want access to a user, but the user might be `null`. If the user is passed as a prop, it is guaranteed it will be there. But if it is consumed by a selector hook, TypeScript will tell you that the user could be `null`.
 
-That is why you should not consume state directly or using a context provider. Pass it down as a prop.
+That is why you should not consume state globally or using a context provider. Pass it down as a prop.
 
 ```tsx
-import { createState } from "./state";
+import { State } from "./state";
 
-const state = createState();
+const state = State();
 
 render(<App state={state} />);
 ```
 
 As your components narrows down on specific state, also pass the related narrowed state down as a prop.
-
-This reduces props passing and maximize discoverability by finding any state pointing to this state object.
 
 ## Traversing up
 
@@ -29,16 +23,18 @@ If a component has been passed a nested state as a prop, it is useful for that c
 ```ts
 import { reactive } from "bonsify";
 
-function createCounter(root) {
+function Counter({ root }) {
   const counter = reactive({
     root,
     count: 0,
-    increase() {
-      counter.count++;
-    },
+    increase,
   });
 
   return counter;
+
+  function incerase() {
+    counter.count++;
+  }
 }
 
 export function createRoot() {

@@ -1,8 +1,12 @@
 # Bonsify
 
-Well-structured, artfully maintained state without the bloat of unnecessary abstractions.
+> Patterns for well-structured, artfully maintained components and state without the bloat of unnecessary abstractions.
 
-> Bonsai trees are all about elegance, minimalism, and careful pruning — strip your state management down to its essential tree structure with just one primitive, reactive.
+Building an application is about wielding UI complexity and state complexity. React is a master at managing UI complexity, but comes short as state complexity increases. Bonsify is a set of patterns that helps you manage state complexity. It does this by grounding you in a core **constructor pattern** you can apply to both components and state management and then builds from that.
+
+Managing complex state management requires you to choose a reactive primitive that components can observe. **Bonsify** provides its own `reactive` primitive, but can can choose `observable` from Mobx, `signal` from Preact Signals or whatever other reactive primitive you have experience with.
+
+To get going quickly:
 
 ```sh
 npm install bonsify
@@ -15,6 +19,4 @@ import babelPlugin from "bonsify/babel-plugin";
 import swcPlugin from "bonsify/swc-plugin";
 ```
 
-[Read the documentation](./docs/01_a_single_primitive.md)
-
-**!!!WARNING!!!** This is currently an educational project.
+[Read the documentation](./docs/01_pattern_constructor.md)

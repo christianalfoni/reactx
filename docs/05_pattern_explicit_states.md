@@ -1,6 +1,6 @@
-# Explicit states
+# Pattern: Explicit States
 
-Explicit states, unions, algebraic data types or finite state machines, the concepts are very similar. The idea is that you define state that reflects being in different explicit states.
+Explicit states, unions, algebraic data types or finite state machines, the concepts are very similar. The idea is that you define state that is in one of either explicit states.
 
 So instead of writing:
 
@@ -50,7 +50,7 @@ By simply using a pattern we can resolve this:
 ```ts
 import { reactive } from "bonsify";
 
-function createCounter() {
+function Counter() {
   const counter = reactive({
     state: IDLE(),
     count: 0,
@@ -82,11 +82,9 @@ function createCounter() {
   }
 }
 
-function createState() {
-  const state = reactive({
-    counter: createCounter(),
-  });
-
-  return state;
+function State() {
+  return {
+    counter: Counter(),
+  };
 }
 ```
