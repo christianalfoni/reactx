@@ -37,7 +37,7 @@ function Counter({ root }) {
   }
 }
 
-export function createRoot() {
+export function Root() {
   const root = reactive({
     isAwesome: true,
     get counter() {
