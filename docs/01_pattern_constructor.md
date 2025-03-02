@@ -1,6 +1,6 @@
 # Pattern: Constructor
 
-The constructor pattern is focused on writing code for components and state management that follows the same principle. This principle is to first expose WHAT the implementation is and then HOW the implementation works.
+The constructor pattern is focused on writing code for components and state management by following the same principle. This principle is exposing first WHAT the implementation is and then HOW the implementation works.
 
 It is important to highlight that implementing new concepts often requires several iterations on "what it is" and "how it does it", where you should not feel constrained by a pattern. But when you are happy with your implementation this pattern will help the next developer better understand what you implemented.
 
