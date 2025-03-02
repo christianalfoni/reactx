@@ -67,7 +67,7 @@ function Data({ persistence }) {
 
 ```ts
 function State({ persistence }) {
-  const data = createData({ persistence });
+  const data = Data({ persistence });
 
   return {
     get todos() {
@@ -103,7 +103,7 @@ function Data({ persistence }) {
 
 ```ts
 function State({ persistence }) {
-  const data = createData({ persistence });
+  const data = Data({ persistence });
 
   return {
     get todos() {
@@ -239,7 +239,7 @@ With **local mutations** you are free to change data "in place" and rather rever
 
 ```ts
 function State({ persistence }) {
-  const data = createData({ persistence });
+  const data = Data({ persistence });
   const state = reactive({
     addingTodo: undefined,
   });
