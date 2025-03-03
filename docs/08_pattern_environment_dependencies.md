@@ -1,6 +1,6 @@
 # Pattern: Environment Dependencies
 
-Applications runs in an environment, typically the browser. You might need to use certain APIs from the environment, for example `localStorage`. It also typically uses certain 3rd party libraries, for example you use `firebase` for persistence. Your application and its code does not really care about `localStorage` or `firebase`, it only cares about persistence.
+Applications run in an environment, typically the browser. You might need to use certain APIs from the environment, for example `localStorage`. The application also typically uses certain 3rd party libraries, for example you use `firebase` for persistence. Your application and its code does not really care about `localStorage` or `firebase`, it only cares about persistence.
 
 Creating an environment interface for your application is a pattern that can clean up your implementation by removing terminology and abstractions that is unrelated to the application itself (like `localStorage` or `firebase`). Additionally you will often avoid adding explicit types in your application code.
 
@@ -60,7 +60,7 @@ render(<App state={state}></App>);
 
 ## Multiple environments
 
-If your state management is to be shared between for example a browser and native application, you can define an environment interface. Even though the browser and the native app uses the same state management, they have each their own implementation of their environment dependencies.
+If your state management is to be shared between for example a browser and native application, you can define a generic environment interface. Even though the browser and the native app uses the same state management, they have each their own implementation of their environment dependencies.
 
 ```ts
 interface LocalPersistence {

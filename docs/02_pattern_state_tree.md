@@ -95,7 +95,7 @@ export function State() {
   return state;
 
   function createCounter() {
-    state.counter = createCounter();
+    state.counter = Counter();
   }
 
   function removeCounter() {

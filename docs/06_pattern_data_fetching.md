@@ -40,7 +40,7 @@ function State({ persistence }) {
 
 ## 2. Revalidate on mutations
 
-Refetch data after a server mutation is performed. This type of approach gives a stronger guarantee that whenever the client requests a server mutation the data will be synced with what is actually on the server.
+Refetch data after a server mutation is performed. This type of approach gives a stronger guarantee that whenever the client requests a server mutation the data will be synced with the server.
 
 ```ts
 function Data({ persistence }) {
@@ -58,9 +58,7 @@ function Data({ persistence }) {
   };
 
   async function revalidateTodos() {
-    try {
-      state.todos = await persistence.todos.fetch();
-    } catch {}
+    state.todos = await persistence.todos.fetch();
   }
 }
 ```
@@ -114,16 +112,16 @@ function State({ persistence }) {
 
   async function addTodo(todo) {
     // This triggers subscription
-    await backend.todos.add(todo);
+    await persistence.todos.add(todo);
   }
 }
 ```
 
 ## Data references
 
-When you fetch a list of todos, the array of those todos and each todo has a reference. In the world of React those references matter, because it is what `memo` components use to determine if the component needs to reconcile. The pattern of mapping an array in a "List" component and render nested "Item" components using `memo` is the most common optimization in React.
+When you fetch a list of todos, the array of those todos and each todo has a reference. In the world of React those references matter, because it is what `memo` components use to determine if the component needs to reconcile. The pattern of mapping an array in a "List" component and render a nested "Item" components using `memo` is the most common optimization in React.
 
-If you use a revalidation approach to data fetching it means that the todos array and each todo in that array will change reference whenever you request any change to the array or any item in the array. In other words your `TodosList` component and every `Todo` component will reconcile regardless of any change.
+If you use a revalidation approach to data fetching the todos array and each todo in that array will change reference on every revalidation. In other words your `TodosList` component and every `Todo` component will reconcile regardless of any change.
 
 Normally this is no concern as reconciliation is fast. But if you are displaying a lot of todos where each todo has a complex UI you risk performance issues.
 
@@ -203,22 +201,6 @@ function createReferenceCache<R extends object, S, A extends any[]>(
 Let us see it in action:
 
 ```ts
-function Todo(todo) {
-  return {
-    get id() {
-      return todo.id;
-    },
-    get completed() {
-      return todo.completed;
-    },
-    toggle,
-  };
-
-  function toggle() {
-    todo.completed = !todo.completed;
-  }
-}
-
 function State() {
   const data = Data();
   const CachedTodo = createReferenceCache(Todo);
@@ -231,7 +213,7 @@ function State() {
 }
 ```
 
-When calling `CachedTodo` it will first check if the data reference is in the `WeakMap`, if so, it returns the existing state. If not, it creates the state as normal and caches it. Using a `WeakMap` is perfect because we do not have to clean up the cache. When the data reference is no longer available, the state removes itself.
+When calling `CachedTodo` it will first check if the data reference is in the `WeakMap`, if so it returns the existing state. If not, it creates the state as normal and caches it. Using a `WeakMap` is perfect because we do not have to clean up the cache. When the data reference is no longer available, the state removes itself.
 
 ## Optimistic data
 
@@ -285,7 +267,8 @@ function Todos({ state }) {
       ) : null}
       {state.addingTodo?.status === "error" ? (
         <li>
-          Eror: {state.addingTodo.todo.title} - {state.addingTodo.error.message}
+          Error: {state.addingTodo.todo.title} -{" "}
+          {state.addingTodo.error.message}
         </li>
       ) : null}
       {state.todos.map((todo) => (
