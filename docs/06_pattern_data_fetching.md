@@ -40,7 +40,7 @@ function State({ persistence }) {
 
 ## 2. Revalidate on mutations
 
-Refetch data after a server mutation is performed. This type of approach gives a stronger guarantee that whenever the client requests a server mutation the data will be synced with the server.
+Refetch data after a server mutation is performed. This type of approach gives a stronger guarantee by refetching the data from the server after any mutation.
 
 ```ts
 function Data({ persistence }) {
