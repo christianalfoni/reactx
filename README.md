@@ -23,13 +23,11 @@ import swcPlugin from "bonsify/swc-plugin";
 
 ## Mobx
 
-[mobx](https://mobx.js.org/README.html)
+[mobx](https://mobx.js.org/README.html) - [mobx-react-observer](https://github.com/christianalfoni/mobx-react-observer)
 
 ```sh
 npm install mobx mobx-react-observer
 ```
-
-Automatic observation in components using [observing-components](https://github.com/christianalfoni/observing-components).
 
 ```ts
 import babelPlugin from "mobx-react-observer/babel-plugin";
@@ -43,8 +41,6 @@ import swcPlugin from "mobx-react-observer/swc-plugin";
 ```sh
 npm install @vue/reactivity vue-reactivity-react-observer
 ```
-
-Automatic observation in components using [observing-components](https://github.com/christianalfoni/observing-components).
 
 ```ts
 import babelPlugin from "vue-reactivity-react-observer/babel-plugin";
