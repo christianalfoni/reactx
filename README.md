@@ -46,3 +46,18 @@ npm install @vue/reactivity vue-reactivity-react-observer
 import babelPlugin from "vue-reactivity-react-observer/babel-plugin";
 import swcPlugin from "vue-reactivity-react-observer/swc-plugin";
 ```
+
+## Preact Signals
+
+[@preact/signals](https://preactjs.com/guide/v10/signals/) - [@preact/signals-react-transform](https://github.com/preactjs/signals/blob/HEAD/packages/react-transform/README.md)
+
+```sh
+npm install @preact/signals @preact/signals-react-transform
+```
+
+```js
+// babel.config.js
+module.exports = {
+  plugins: [["module:@preact/signals-react-transform"]],
+};
+```
