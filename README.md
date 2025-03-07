@@ -36,7 +36,7 @@ import swcPlugin from "mobx-react-observer/swc-plugin";
 
 ## Vue Reactivity
 
-[@vue/reactivity](https://mobx.js.org/README.html) - [vue-reactivity-react-observer](https://www.npmjs.com/package/mobx-react-lite)
+[@vue/reactivity](https://mobx.js.org/README.html) - [vue-reactivity-react-observer](https://github.com/christianalfoni/vue-reactivity-react-observer)
 
 ```sh
 npm install @vue/reactivity vue-reactivity-react-observer
