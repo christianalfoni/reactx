@@ -160,3 +160,124 @@ describe("readonly", () => {
     }).toThrow("Cannot mutate a readonly object");
   });
 });
+
+// Tests for nested reactive and readonly combinations
+describe("reactive and readonly - nested combinations", () => {
+  it("allows mutation and observation with reactive containing nested reactive", () => {
+    const nested = reactive({ value: 1 });
+    const outer = reactive({ nested });
+    let notified = false;
+
+    const observer = new Observer();
+
+    const untrack = observer.track();
+    // Access nested value to register observation
+    outer.nested.value;
+    untrack();
+
+    observer.subscribe(() => {
+      notified = true;
+    });
+
+    // Change nested reactive property through outer reference
+    outer.nested.value = 2;
+
+    expect(notified).toBe(true);
+    expect(outer.nested.value).toBe(2);
+    expect(nested.value).toBe(2); // Original nested object should also be updated
+  });
+
+  it("prevents mutation at all levels with readonly containing nested readonly", () => {
+    const nested = readonly(reactive({ value: 1 }));
+    const outer = readonly(reactive({ nested }));
+
+    // Try to modify outer property
+    expect(() => {
+      outer.nested = readonly(reactive({ value: 2 }));
+    }).toThrow("Cannot mutate a readonly object");
+
+    // Try to modify nested property
+    expect(() => {
+      outer.nested.value = 2;
+    }).toThrow("Cannot mutate a readonly object");
+
+    expect(outer.nested.value).toBe(1); // Value should remain unchanged
+  });
+
+  it("prevents mutation at all levels with readonly containing nested reactive", () => {
+    const nested = reactive({ value: 1 });
+    const outer = readonly(reactive({ nested }));
+
+    // Try to modify outer property
+    expect(() => {
+      outer.nested = reactive({ value: 2 });
+    }).toThrow("Cannot mutate a readonly object");
+
+    // Try to modify nested property - should also be readonly despite being originally reactive
+    expect(() => {
+      outer.nested.value = 2;
+    }).toThrow("Cannot mutate a readonly object");
+
+    expect(outer.nested.value).toBe(1); // Value should remain unchanged
+    expect(nested.value).toBe(1); // Original nested object should remain unchanged
+  });
+
+  it("prevents mutation of readonly property inside reactive object", () => {
+    const nested = readonly(reactive({ value: 1 }));
+    const outer = reactive({ nested });
+
+    // Can modify outer properties
+    outer.nested = readonly(reactive({ value: 2 }));
+    expect(outer.nested.value).toBe(2);
+
+    // Cannot modify readonly nested properties
+    expect(() => {
+      outer.nested.value = 3;
+    }).toThrow("Cannot mutate a readonly object");
+  });
+
+  it("allows observation of readonly nested in reactive", () => {
+    const nested = readonly(reactive({ value: 1 }));
+    const outer = reactive({ nested });
+    let notified = false;
+
+    const observer = new Observer();
+    const untrack = observer.track();
+    // Access nested value to register observation
+    outer.nested.value;
+    untrack();
+
+    observer.subscribe(() => {
+      notified = true;
+    });
+
+    // Replace the nested readonly with a new one
+    outer.nested = readonly(reactive({ value: 2 }));
+
+    expect(notified).toBe(true);
+    expect(outer.nested.value).toBe(2);
+  });
+
+  it("allows observation of reactive nested in readonly through source object", () => {
+    const nested = reactive({ value: 1 });
+    const outer = readonly(reactive({ nested }));
+    let notified = false;
+
+    const observer = new Observer();
+    const untrack = observer.track();
+    // Access nested value to register observation
+    outer.nested.value;
+    untrack();
+
+    observer.subscribe(() => {
+      notified = true;
+    });
+
+    // Should not be able to modify through readonly reference
+    expect(() => {
+      outer.nested.value = 2;
+    }).toThrow("Cannot mutate a readonly object");
+
+    expect(notified).toBe(false);
+  });
+});

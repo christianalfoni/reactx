@@ -1,6 +1,7 @@
 import { memo, useSyncExternalStore } from "react";
 
-const proxyCache = new WeakMap<object, any>();
+const proxyCache = new WeakMap<any, any>();
+const readonlyProxyCache = new WeakMap<any, any>();
 const allObservations = new WeakMap<any, Set<Observer>>();
 const observersStack: Observer[] = [];
 
@@ -125,13 +126,18 @@ const iteratingArrayMethods = {
   },
 };
 
+const PROXY_TARGET = Symbol("PROXY_TARGET");
+
 function createArrayProxy(target: any, readonly = false) {
+  // We also observe the array itself to track mutations
+  getCurrentObserver()?.observe(target);
+
   return new Proxy(target, {
     get(target, key) {
       const result = Reflect.get(target, key);
 
-      if (key === IS_REACTIVE) {
-        return true;
+      if (key === PROXY_TARGET) {
+        return { target, readonly };
       }
 
       if (typeof key === "symbol") {
@@ -212,49 +218,13 @@ function createArrayProxy(target: any, readonly = false) {
   });
 }
 
-const IS_REACTIVE = Symbol("IS_REACTIVE");
-
-export type Reactive<T extends Record<string, any>> = T & {
-  [IS_REACTIVE]: true;
-};
-
-export function readonly<T extends Record<string, any>>(value: Reactive<T>): T {
-  if (!value[IS_REACTIVE]) {
-    throw new Error("You can only make reactive objects readonly");
-  }
-
-  // @ts-expect-error
-  return reactive(value, true);
-}
-
-export function reactive<T extends Record<string, any>>(value: T): Reactive<T>;
-export function reactive<T extends Record<string, any>>(
-  value: T,
-  readonly = false
-): T {
-  if (value === null || typeof value !== "object") {
-    return value;
-  }
-
-  const cachedProxy = proxyCache.get(value);
-
-  if (cachedProxy) {
-    return cachedProxy;
-  }
-
-  if (Array.isArray(value)) {
-    // But we also observe the array itself to track mutations
-    getCurrentObserver()?.observe(value);
-
-    return createArrayProxy(value, readonly);
-  }
-
-  const proxy = new Proxy(value, {
+function createObjectProxy(target: any, readonly = false) {
+  return new Proxy(target, {
     get(target, key) {
       const result = Reflect.get(target, key) as any;
 
-      if (key === IS_REACTIVE) {
-        return true;
+      if (key === PROXY_TARGET) {
+        return { target, readonly };
       }
 
       if (
@@ -274,8 +244,7 @@ export function reactive<T extends Record<string, any>>(
 
       getCurrentObserver()?.observe(target, key);
 
-      // @ts-expect-error
-      return reactive(result, readonly);
+      return createProxy(result, readonly);
     },
     set(target, key, value) {
       if (readonly) {
@@ -304,10 +273,61 @@ export function reactive<T extends Record<string, any>>(
       return wasSet;
     },
   });
+}
 
-  proxyCache.set(value, proxy);
+function createProxy(target: unknown, readonly = false) {
+  if (target === null || typeof target !== "object") {
+    return target;
+  }
+
+  // If already a proxy
+  if (PROXY_TARGET in target) {
+    const proxyTarget: any = target[PROXY_TARGET];
+
+    // If the proxy is in the same readonly state, we can just
+    // return the proxy
+    if (proxyTarget.readonly === readonly) {
+      return target;
+    }
+
+    // But if we want want readonly and the proxy is not,
+    // we unwrap the target to create a new readonly proxy
+    if (readonly && !proxyTarget.readonly) {
+      target = proxyTarget.target;
+    }
+  }
+
+  const cachedProxy = readonly
+    ? readonlyProxyCache.get(target)
+    : proxyCache.get(target);
+
+  if (cachedProxy) {
+    return cachedProxy;
+  }
+
+  let proxy;
+
+  if (Array.isArray(target)) {
+    proxy = createArrayProxy(target, readonly);
+  } else {
+    proxy = createObjectProxy(target, readonly);
+  }
+
+  if (readonly) {
+    readonlyProxyCache.set(target, proxy);
+  } else {
+    proxyCache.set(target, proxy);
+  }
 
   return proxy;
+}
+
+export function readonly<T extends Record<string, any>>(value: T): T {
+  return createProxy(value, true);
+}
+
+export function reactive<T extends Record<string, any>>(value: T): T {
+  return createProxy(value);
 }
 
 export function createDataCache<T extends { data: any }, S>(
@@ -398,7 +418,5 @@ export function merge<T extends Record<string, any>[]>(
 type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
   k: infer I
 ) => void
-  ? I extends Reactive<infer T>
-    ? T
-    : I
+  ? I
   : never;
