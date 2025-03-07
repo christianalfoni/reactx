@@ -2,23 +2,21 @@
 
 Depending on what reactive primitive you are using it can be useful to protect state changes. This prevents components from manipulating state in unpredictable ways and rather force them to use the functions exposed from the public interface.
 
+This is how **Bonsify** handles protecting state:
+
 ```ts
-import { reactive } from "bonsify";
+import { reactive, readonly } from "bonsify";
 
 function Counter() {
-  const state = reactive({
+  const counter = reactive({
     count: 0,
+    increase,
   });
 
-  return {
-    get count() {
-      return state.count;
-    },
-    increase,
-  };
+  return readonly(counter);
 
   function increase() {
-    state.count++;
+    counter.count++;
   }
 }
 ```
@@ -26,18 +24,15 @@ function Counter() {
 Now the `count` can not be changed from components. This pattern is especially useful with data to ensure that all data changes has a related server mutation.
 
 ```ts
-import { reactive } from "bonsify";
+import { reactive, readonly, merge } from "bonsify";
 
-function Post({ post, persistence }) {
-  return {
-    get id() {
-      return post.id;
-    },
-    get title() {
-      return post.title;
-    },
+function Post({ data, persistence }) {
+  const post = reactive({
+    ...data,
     changeTitle,
-  };
+  });
+
+  return readonly(post);
 
   function changeTitle(newTitle) {
     post.title = newTitle;
@@ -47,14 +42,16 @@ function Post({ post, persistence }) {
   }
 }
 
-function State({ persistence }) {
-  const data = Data({ persistence });
+function Data({ persistence }) {
+  const data = reactive({
+    posts: [],
+  });
 
-  return {
-    get posts() {
-      return data.posts.map(createPost);
-    },
-  };
+  persistence.posts.fetch().then((posts) => {
+    data.posts = posts.map(createPost);
+  });
+
+  return readonly(data);
 
   function createPost(post) {
     return Post({ post, persistence });

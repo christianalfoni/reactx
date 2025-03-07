@@ -125,18 +125,16 @@ const iteratingArrayMethods = {
   },
 };
 
-function createArrayProxy(target: any) {
+function createArrayProxy(target: any, readonly = false) {
   return new Proxy(target, {
     get(target, key) {
       const result = Reflect.get(target, key);
 
-      if (typeof key === "symbol") {
-        return result;
+      if (key === IS_REACTIVE) {
+        return true;
       }
 
-      const isAccessingFunction = typeof result === "function";
-
-      if (!isAccessingFunction) {
+      if (typeof key === "symbol") {
         return result;
       }
 
@@ -149,11 +147,16 @@ function createArrayProxy(target: any) {
         }
 
         return (...args: any[]) => {
+          if (readonly) {
+            throw new Error(`Cannot mutate a readonly array`);
+          }
+
           const result = originMethod.apply(target, args);
           const currentObservers = Array.from(observers);
 
           for (const observer of currentObservers) {
             observer.notify(target);
+            observer.notify(target, "length");
           }
 
           return result;
@@ -175,9 +178,16 @@ function createArrayProxy(target: any) {
         };
       }
 
-      return result;
+      getCurrentObserver()?.observe(target, key);
+
+      // @ts-expect-error
+      return reactive(result, readonly);
     },
     set(target, key, value) {
+      if (readonly) {
+        throw new Error(`Cannot mutate a readonly array`);
+      }
+
       const wasSet = Reflect.set(target, key, value);
 
       if (typeof key === "symbol") {
@@ -202,7 +212,26 @@ function createArrayProxy(target: any) {
   });
 }
 
-export function reactive<T extends Record<string, any>>(value: T): T {
+const IS_REACTIVE = Symbol("IS_REACTIVE");
+
+export type Reactive<T extends Record<string, any>> = T & {
+  [IS_REACTIVE]: true;
+};
+
+export function readonly<T extends Record<string, any>>(value: Reactive<T>): T {
+  if (!value[IS_REACTIVE]) {
+    throw new Error("You can only make reactive objects readonly");
+  }
+
+  // @ts-expect-error
+  return reactive(value, true);
+}
+
+export function reactive<T extends Record<string, any>>(value: T): Reactive<T>;
+export function reactive<T extends Record<string, any>>(
+  value: T,
+  readonly = false
+): T {
   if (value === null || typeof value !== "object") {
     return value;
   }
@@ -213,9 +242,20 @@ export function reactive<T extends Record<string, any>>(value: T): T {
     return cachedProxy;
   }
 
+  if (Array.isArray(value)) {
+    // But we also observe the array itself to track mutations
+    getCurrentObserver()?.observe(value);
+
+    return createArrayProxy(value, readonly);
+  }
+
   const proxy = new Proxy(value, {
     get(target, key) {
       const result = Reflect.get(target, key) as any;
+
+      if (key === IS_REACTIVE) {
+        return true;
+      }
 
       if (
         typeof key === "symbol" ||
@@ -223,17 +263,6 @@ export function reactive<T extends Record<string, any>>(value: T): T {
         (result && result instanceof Promise)
       ) {
         return result;
-      }
-
-      const isAccessingArray = Array.isArray(result);
-
-      if (isAccessingArray) {
-        // We observe the prop as normal as it can be replaced
-        getCurrentObserver()?.observe(target, key);
-        // But we also observe the array itself to track mutations
-        getCurrentObserver()?.observe(result);
-
-        return createArrayProxy(result);
       }
 
       const descriptor = Object.getOwnPropertyDescriptor(target, key);
@@ -245,9 +274,14 @@ export function reactive<T extends Record<string, any>>(value: T): T {
 
       getCurrentObserver()?.observe(target, key);
 
-      return reactive(result);
+      // @ts-expect-error
+      return reactive(result, readonly);
     },
     set(target, key, value) {
+      if (readonly) {
+        throw new Error("Cannot mutate a readonly object");
+      }
+
       const wasSet = Reflect.set(target, key, value);
 
       if (typeof key === "symbol") {
@@ -275,3 +309,96 @@ export function reactive<T extends Record<string, any>>(value: T): T {
 
   return proxy;
 }
+
+export function createDataCache<T extends { data: any }, S>(
+  create: (params: T) => S
+): (params: T) => S {
+  const cache = new WeakMap<T["data"], S>();
+
+  return (params) => {
+    if (!params.data) {
+      throw new Error("You have to pass a data property to cache it");
+    }
+
+    let state = cache.get(params.data);
+
+    if (!state) {
+      state = create(params);
+      cache.set(params.data, state);
+    }
+
+    return state;
+  };
+}
+
+export function merge<T extends Record<string, any>[]>(
+  ...sources: T
+): UnionToIntersection<T[number]> {
+  // Create a merged proxy object
+  const mergedProxy = new Proxy(
+    {},
+    {
+      get(_, key: any) {
+        // Look through all sources for the property
+        for (const source of sources) {
+          if (key in source) {
+            const value = source[key];
+
+            // Handle functions by binding them to their original source
+            if (typeof value === "function") {
+              return value.bind(source);
+            }
+
+            return value;
+          }
+        }
+
+        return undefined;
+      },
+      set(target, key: any, value) {
+        // Look through all sources for the property
+        for (const source of sources) {
+          if (key in source) {
+            return (source[key] = value);
+          }
+        }
+
+        return Reflect.set(target, key, value);
+      },
+      // Allow property existence checks
+      has(_, key) {
+        return sources.some((source) => key in source);
+      },
+      // Support Object.keys() and similar methods
+      ownKeys() {
+        const keys = new Set<string | symbol>();
+        for (const source of sources) {
+          Object.keys(source).forEach((key) => keys.add(key));
+        }
+        return Array.from(keys);
+      },
+      // Support property descriptors
+      getOwnPropertyDescriptor(_, key: any) {
+        for (const source of sources) {
+          if (key in source) {
+            // We must set configurable to true for the proxy to work
+            return { configurable: true, enumerable: true, value: source[key] };
+          }
+        }
+        return undefined;
+      },
+    }
+  );
+
+  // Make the merged object reactive
+  return mergedProxy as any;
+}
+
+// Helper type for converting union types to intersection types
+type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
+  k: infer I
+) => void
+  ? I extends Reactive<infer T>
+    ? T
+    : I
+  : never;

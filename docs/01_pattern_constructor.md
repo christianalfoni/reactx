@@ -32,17 +32,13 @@ import { reactive } from "bonsify";
 // The name and dependencies
 export function Counter({ initialCount }) {
   // Constructor
-  const state = reactive({
+  const counter = reactive({
     count: initialCount || 0,
+    increase,
   });
 
   // Return public interface
-  return {
-    get count() {
-      return state.count;
-    },
-    increase,
-  };
+  return counter;
 
   // Methods
   function increase() {

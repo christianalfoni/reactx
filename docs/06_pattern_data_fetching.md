@@ -10,26 +10,12 @@ Fetch data once and apply local mutations to the data, where server mutations is
 function Data({ persistence }) {
   const data = reactive({
     todos: [],
+    addTodo,
   });
 
   persistence.todos.fetch().then((todos) => (data.todos = todos));
 
-  return data;
-}
-```
-
-In this type of data handling you can just toggle the `completed` state of any todo, push new todos on to the existing data array etc.
-
-```ts
-function State({ persistence }) {
-  const data = Data({ persistence });
-
-  return {
-    get todos() {
-      return data.todos;
-    },
-    addTodo,
-  };
+  return readonly(data);
 
   function addTodo(todo) {
     data.todos.push(todo);
@@ -38,41 +24,26 @@ function State({ persistence }) {
 }
 ```
 
+In this type of data handling you can just toggle the `completed` state of any todo, push new todos on to the existing data array etc.
+
 ## 2. Revalidate on mutations
 
 Refetch data after a server mutation is performed. This type of approach gives a stronger guarantee by refetching the data from the server after any mutation.
 
 ```ts
 function Data({ persistence }) {
-  const state = reactive({
+  const data = reactive({
     todos: [],
+    revalidateTodos,
   });
 
   revalidateTodos();
 
-  return {
-    get todos() {
-      return state.todos;
-    },
-    revalidateTodos,
-  };
+  return readonly(data);
 
   async function revalidateTodos() {
-    state.todos = await persistence.todos.fetch();
+    data.todos = await persistence.todos.fetch();
   }
-}
-```
-
-```ts
-function State({ persistence }) {
-  const data = Data({ persistence });
-
-  return {
-    get todos() {
-      return data.todos;
-    },
-    addTodo,
-  };
 
   async function addTodo(todo) {
     await persistence.todos.add(todo);
@@ -89,6 +60,7 @@ Subscribe to data and get updates automatically. This type of approach simplifie
 function Data({ persistence }) {
   const data = reactive({
     todos: [],
+    addTodo,
   });
 
   persistence.todos.subscribe((todos) => {
@@ -96,19 +68,6 @@ function Data({ persistence }) {
   });
 
   return data;
-}
-```
-
-```ts
-function State({ persistence }) {
-  const data = Data({ persistence });
-
-  return {
-    get todos() {
-      return data.todos;
-    },
-    addTodo,
-  };
 
   async function addTodo(todo) {
     // This triggers subscription
@@ -132,30 +91,29 @@ Normally this is no concern as reconciliation is fast. But if you are displaying
 In the examples above we are exposing data directly to components, but you might want to rather derive data to some state management that exposes the data in a more controlled way.
 
 ```ts
-function Todo(todo) {
-  return {
-    get id() {
-      return todo.id;
-    },
-    get completed() {
-      return todo.completed;
-    },
+function Todo(data) {
+  const todo = reactive({
+    ...data,
     toggle,
-  };
+  });
+
+  return readonly(todo);
 
   function toggle() {
     todo.completed = !todo.completed;
   }
 }
 
-function State() {
-  const data = Data();
+function Data({ persistence }) {
+  const data = reactive({
+    todos: [],
+  });
 
-  return {
-    get todos() {
-      return data.todos.map(Todo);
-    },
-  };
+  persistence.todos.subscribe((todos) => {
+    data.todos = todos.map(Todo);
+  });
+
+  return readonly(data);
 }
 ```
 
@@ -166,31 +124,25 @@ Now we are hiding data from the components and gain control of how components in
 If our data fetching ensures the integrety of data references we break that integrity when deriving.
 
 ```ts
-export function State() {
-  const data = Data();
-
-  return {
-    get todos() {
-      return data.todos.map(Todo);
-    },
-  };
-}
+persistence.todos.subscribe((todos) => {
+  data.todos = todos.map(Todo);
+});
 ```
 
-Even if our `data.todos` ensures consistent references our `map` will always create a new array and `Todo` will always create a new state object. To make sure the `Todo` state object is only created when the underlying `todo` data reference actually changes, we can use a reference cache:
+Even if our `data.todos` ensures consistent references our `map` will always create a new array and `Todo` will always create a new state object. To make sure the `Todo` state object is only created when the underlying `todo` data reference actually changes, we can use a data cache:
 
 ```ts
-function createReferenceCache<R extends object, S, A extends any[]>(
-  create: (ref: D, ...args: A) => S
-) {
-  const cache = new WeakMap<D, S>();
+function createDataCache<T extends { data: any }, S>(
+  create: (params: T) => S
+): (params: T) => S {
+  const cache = new WeakMap<T["data"], S>();
 
-  return (ref: R, ...args: A) => {
-    let state = cache.get(ref);
+  return (params) => {
+    let state = cache.get(params.data);
 
     if (!state) {
-      state = create(ref, ...args);
-      cache.add(state);
+      state = create(params);
+      cache.set(params.data, state);
     }
 
     return state;
@@ -201,15 +153,36 @@ function createReferenceCache<R extends object, S, A extends any[]>(
 Let us see it in action:
 
 ```ts
-function State() {
-  const data = Data();
-  const CachedTodo = createReferenceCache(Todo);
+function Todo({ data, persistence }) {
+  const todo = reactive({
+    ...data,
+    toggle,
+  });
 
-  return {
-    get todos() {
-      return data.todos.map(CachedTodo);
-    },
-  };
+  return readonly(todo);
+
+  function toggle() {
+    persistence.todos.update(todo.id, {
+      completed: todo.completed,
+    });
+  }
+}
+
+function Data({ persistence }) {
+  const data = reactive({
+    todos: [],
+  });
+  const CachedTodo = createDataCache(Todo);
+
+  persistence.todos.subscribe((todos) => {
+    data.todos = todos.map(createTodo);
+  });
+
+  return readonly(data);
+
+  function createTodo(data) {
+    return CachedTodo({ data, persistence });
+  }
 }
 ```
 
@@ -220,33 +193,34 @@ When calling `CachedTodo` it will first check if the data reference is in the `W
 With **local mutations** you are free to change data "in place" and rather revert it if the background server mutation fails. But with revalidation you want to show data that is "in flight", often with some UI indication that shows it is loading or show the data as optimistic data. This can be done by exposing a mutation state:
 
 ```ts
-function State({ persistence }) {
-  const data = Data({ persistence });
-  const state = reactive({
+function Data({ persistence }) {
+  const data = reactive({
+    todos: [],
     addingTodo: undefined,
+    addTodo,
   });
 
-  return {
-    get todos() {
-      return data.todos;
-    },
-    get addingTodo() {
-      return state.addingTodo;
-    },
-    addTodo,
-  };
+  persistence.todos.subscribe((todos) => {
+    data.todos = todos;
+  });
+
+  return data;
+
+  async function revalidateTodos() {
+    data.todos = await persistence.todos.fetch();
+  }
 
   async function addTodo(todo) {
-    state.addingTodo = {
+    data.addingTodo = {
       status: "pending",
       todo,
     };
     try {
       await persistence.todos.add(todo);
       await data.revalidateTodos();
-      state.addingTodo = undefined;
+      data.addingTodo = undefined;
     } catch (error) {
-      state.addingTodo = {
+      data.addingTodo = {
         status: "error",
         todo,
         error,
