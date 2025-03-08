@@ -5,7 +5,7 @@ Depending on what reactive primitive you are using it can be useful to protect s
 This is how **Bonsify** handles protecting state:
 
 ```ts
-import { reactive, readonly } from "bonsify";
+import { reactive } from "bonsify";
 
 function Counter() {
   const counter = reactive({
@@ -13,7 +13,7 @@ function Counter() {
     increase,
   });
 
-  return readonly(counter);
+  return reactive.readonly(counter);
 
   function increase() {
     counter.count++;
@@ -24,7 +24,7 @@ function Counter() {
 Now the `count` can not be changed from components. This pattern is especially useful with data to ensure that all data changes has a related server mutation.
 
 ```ts
-import { reactive, readonly, merge } from "bonsify";
+import { reactive } from "bonsify";
 
 function Post({ data, persistence }) {
   const post = reactive({
@@ -32,7 +32,7 @@ function Post({ data, persistence }) {
     changeTitle,
   });
 
-  return readonly(post);
+  return reactive.readonly(post);
 
   function changeTitle(newTitle) {
     post.title = newTitle;
@@ -51,7 +51,7 @@ function Data({ persistence }) {
     data.posts = posts.map(createPost);
   });
 
-  return readonly(data);
+  return reactive.readonly(data);
 
   function createPost(post) {
     return Post({ post, persistence });

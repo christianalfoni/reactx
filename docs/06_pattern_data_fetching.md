@@ -15,7 +15,7 @@ function Data({ persistence }) {
 
   persistence.todos.fetch().then((todos) => (data.todos = todos));
 
-  return readonly(data);
+  return reactive.readonly(data);
 
   function addTodo(todo) {
     data.todos.push(todo);
@@ -39,7 +39,7 @@ function Data({ persistence }) {
 
   revalidateTodos();
 
-  return readonly(data);
+  return reactive.readonly(data);
 
   async function revalidateTodos() {
     data.todos = await persistence.todos.fetch();
@@ -97,7 +97,7 @@ function Todo(data) {
     toggle,
   });
 
-  return readonly(todo);
+  return reactive.readonly(todo);
 
   function toggle() {
     todo.completed = !todo.completed;
@@ -113,7 +113,7 @@ function Data({ persistence }) {
     data.todos = todos.map(Todo);
   });
 
-  return readonly(data);
+  return reactive.readonly(data);
 }
 ```
 
@@ -159,7 +159,7 @@ function Todo({ data, persistence }) {
     toggle,
   });
 
-  return readonly(todo);
+  return reactive.readonly(todo);
 
   function toggle() {
     persistence.todos.update(todo.id, {
@@ -178,7 +178,7 @@ function Data({ persistence }) {
     data.todos = todos.map(createTodo);
   });
 
-  return readonly(data);
+  return reactive.readonly(data);
 
   function createTodo(data) {
     return CachedTodo({ data, persistence });
