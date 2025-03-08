@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { reactive, Observer, readonly } from ".";
+import { reactive } from ".";
+import { Observer } from "./observer";
 
 describe("reactive", () => {
   it("notifies the observer on property change", () => {
@@ -81,7 +82,7 @@ describe("reactive - nested tracking", () => {
 describe("readonly", () => {
   it("prevents modification of object properties", () => {
     const data = reactive({ value: 1 });
-    const readonlyData = readonly(data);
+    const readonlyData = reactive.readonly(data);
 
     expect(() => {
       readonlyData.value = 2;
@@ -92,7 +93,7 @@ describe("readonly", () => {
 
   it("prevents array mutations", () => {
     const arr = reactive([1, 2, 3]);
-    const readonlyArr = readonly(arr);
+    const readonlyArr = reactive.readonly(arr);
 
     expect(() => {
       readonlyArr.push(4);
@@ -107,7 +108,7 @@ describe("readonly", () => {
 
   it("makes nested objects readonly", () => {
     const data = reactive({ nested: { value: 1 } });
-    const readonlyData = readonly(data);
+    const readonlyData = reactive.readonly(data);
 
     expect(() => {
       readonlyData.nested.value = 2;
@@ -118,7 +119,7 @@ describe("readonly", () => {
 
   it("allows observing readonly objects", () => {
     const data = reactive({ value: 1 });
-    const readonlyData = readonly(data);
+    const readonlyData = reactive.readonly(data);
     let notified = false;
 
     const observer = new Observer();
@@ -153,7 +154,7 @@ describe("readonly", () => {
       },
     });
 
-    const readonlyObj = readonly(original);
+    const readonlyObj = reactive.readonly(original);
 
     expect(() => {
       readonlyObj.firstItem.value = "modified";
@@ -188,12 +189,12 @@ describe("reactive and readonly - nested combinations", () => {
   });
 
   it("prevents mutation at all levels with readonly containing nested readonly", () => {
-    const nested = readonly(reactive({ value: 1 }));
-    const outer = readonly(reactive({ nested }));
+    const nested = reactive.readonly(reactive({ value: 1 }));
+    const outer = reactive.readonly(reactive({ nested }));
 
     // Try to modify outer property
     expect(() => {
-      outer.nested = readonly(reactive({ value: 2 }));
+      outer.nested = reactive.readonly(reactive({ value: 2 }));
     }).toThrow("Cannot mutate a readonly object");
 
     // Try to modify nested property
@@ -206,7 +207,7 @@ describe("reactive and readonly - nested combinations", () => {
 
   it("prevents mutation at all levels with readonly containing nested reactive", () => {
     const nested = reactive({ value: 1 });
-    const outer = readonly(reactive({ nested }));
+    const outer = reactive.readonly(reactive({ nested }));
 
     // Try to modify outer property
     expect(() => {
@@ -223,11 +224,11 @@ describe("reactive and readonly - nested combinations", () => {
   });
 
   it("prevents mutation of readonly property inside reactive object", () => {
-    const nested = readonly(reactive({ value: 1 }));
+    const nested = reactive.readonly(reactive({ value: 1 }));
     const outer = reactive({ nested });
 
     // Can modify outer properties
-    outer.nested = readonly(reactive({ value: 2 }));
+    outer.nested = reactive.readonly(reactive({ value: 2 }));
     expect(outer.nested.value).toBe(2);
 
     // Cannot modify readonly nested properties
@@ -237,7 +238,7 @@ describe("reactive and readonly - nested combinations", () => {
   });
 
   it("allows observation of readonly nested in reactive", () => {
-    const nested = readonly(reactive({ value: 1 }));
+    const nested = reactive.readonly(reactive({ value: 1 }));
     const outer = reactive({ nested });
     let notified = false;
 
@@ -252,7 +253,7 @@ describe("reactive and readonly - nested combinations", () => {
     });
 
     // Replace the nested readonly with a new one
-    outer.nested = readonly(reactive({ value: 2 }));
+    outer.nested = reactive.readonly(reactive({ value: 2 }));
 
     expect(notified).toBe(true);
     expect(outer.nested.value).toBe(2);
@@ -260,7 +261,7 @@ describe("reactive and readonly - nested combinations", () => {
 
   it("allows observation of reactive nested in readonly through source object", () => {
     const nested = reactive({ value: 1 });
-    const outer = readonly(reactive({ nested }));
+    const outer = reactive.readonly(reactive({ nested }));
     let notified = false;
 
     const observer = new Observer();

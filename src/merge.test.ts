@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { reactive, readonly, Observer, merge } from ".";
+import { reactive } from ".";
+import { merge } from "./merge";
+import { Observer } from "./observer";
 
 describe("merge", () => {
   it("should merge properties from multiple objects", () => {
@@ -82,7 +84,7 @@ describe("merge", () => {
 
   it("should properly handle readonly objects", () => {
     const obj1 = reactive({ count: 1 });
-    const readonlyObj1 = readonly(obj1);
+    const readonlyObj1 = reactive.readonly(obj1);
     const obj2 = reactive({ name: "test" });
 
     const merged = merge(readonlyObj1, obj2);
@@ -165,8 +167,8 @@ describe("merge", () => {
   });
 
   it("should create a fully readonly merged object when all sources are readonly", () => {
-    const obj1 = readonly(reactive({ a: 1 }));
-    const obj2 = readonly(reactive({ b: 2 }));
+    const obj1 = reactive.readonly(reactive({ a: 1 }));
+    const obj2 = reactive.readonly(reactive({ b: 2 }));
 
     const merged = merge(obj1, obj2);
 
