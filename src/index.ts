@@ -133,6 +133,15 @@ function createArrayProxy(target: any, readonly = false) {
   getCurrentObserver()?.observe(target);
 
   return new Proxy(target, {
+    has(target, key) {
+      const result = Reflect.has(target, key);
+
+      if (key === PROXY_TARGET) {
+        return true;
+      }
+
+      return result;
+    },
     get(target, key) {
       const result = Reflect.get(target, key);
 
@@ -220,6 +229,15 @@ function createArrayProxy(target: any, readonly = false) {
 
 function createObjectProxy(target: any, readonly = false) {
   return new Proxy(target, {
+    has(target, key) {
+      const result = Reflect.has(target, key);
+
+      if (key === PROXY_TARGET) {
+        return true;
+      }
+
+      return result;
+    },
     get(target, key) {
       const result = Reflect.get(target, key) as any;
 
