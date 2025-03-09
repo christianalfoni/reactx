@@ -9,7 +9,7 @@ It is important to highlight that implementing new concepts often requires sever
 ```tsx
 import { useState } from "react";
 
-// The name and dependencies
+// The name in PascalCase and dependencies as an object
 export function Counter({ initialCount }) {
   // Constructor
   const [count, setCount] = useState(initialCount || 0);
@@ -29,7 +29,7 @@ export function Counter({ initialCount }) {
 ```ts
 import { reactive } from "bonsify";
 
-// The name and dependencies
+// The name in PascalCase and dependencies as an object
 export function Counter({ initialCount }) {
   // Constructor
   const counter = reactive({
