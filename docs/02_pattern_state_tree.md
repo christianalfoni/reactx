@@ -63,44 +63,44 @@ export function Counter() {
 
 ## Disposing state
 
-You might initialize state that creates a side effect that needs to be disposed of when you later remove the state.
+You might initialize nested state that creates a side effect. If the parent state is disposed for whatever reason you want to clean up these nested effects.
 
 ```ts
-function Counter() {
+// The counter creates an interval effect
+function Counter({ onDispose }) {
   const counter = reactive({
     count: 0,
-    dispose,
   });
 
   const interval = setInterval(increaseCount, 1000);
+
+  onDispose(() => clearInterval(interval));
 
   return counter;
 
   function increaseCount() {
     counter.count++;
   }
-
-  function dispose() {
-    clearInterval(interval);
-  }
 }
 
+// We allow this state to be disposed
 export function State() {
+  // We keep track of any disposers
+  const disposers = new Set();
   const state = reactive({
-    counter: undefined,
-    createCounter,
-    removeCounter,
+    // We pass it down the tree
+    counter: Counter({ onDispose }),
+    // When disposing of the state, any registered disposers are also disposed
+    dispose() {
+      disposers.forEach((dispose) => dispose());
+      disposers.clear();
+    },
   });
 
   return state;
 
-  function createCounter() {
-    state.counter = Counter();
-  }
-
-  function removeCounter() {
-    state.counter?.dispose();
-    state.counter = undefined;
+  function onDispose(disposer) {
+    disposers.set(disposer);
   }
 }
 ```
