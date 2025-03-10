@@ -101,12 +101,15 @@ function createArrayProxy(target: any, readonly = false) {
         const reactifier = iteratingArrayMethods[key];
 
         return (...args: any[]) => {
-          return originMethod.apply(target, [
-            (...methodArgs: any[]) => {
-              reactifier(methodArgs, readonly);
-              return args[0](...methodArgs);
-            },
-          ]);
+          return originMethod.apply(
+            target,
+            [
+              (...methodArgs: any[]) => {
+                reactifier(methodArgs, readonly);
+                return args[0](...methodArgs);
+              },
+            ].concat(args.slice(1))
+          );
         };
       }
 
@@ -224,7 +227,7 @@ export function createProxy(target: unknown, readonly = false) {
       return target;
     }
 
-    // But if we want want readonly and the proxy is not,
+    // But if we want readonly and the proxy is not,
     // we unwrap the target to create a new readonly proxy
     if (readonly && !proxyTarget.readonly) {
       target = proxyTarget.target;
