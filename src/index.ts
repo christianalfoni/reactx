@@ -1,7 +1,7 @@
 import { merge } from "./merge";
 import { createProxy } from "./proxy";
 
-export { observer } from "./observer";
+export { observer, Observer } from "./observer";
 
 export function reactive<T extends Record<string, any>>(value: T): T {
   return createProxy(value);
