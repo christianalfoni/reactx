@@ -106,7 +106,7 @@ function createArrayProxy(target: any, readonly = false) {
             [
               (...methodArgs: any[]) => {
                 reactifier(methodArgs, readonly);
-                return args[0](...methodArgs);
+                return createProxy(args[0](...methodArgs), readonly);
               },
             ].concat(args.slice(1))
           );
