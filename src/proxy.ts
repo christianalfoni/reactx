@@ -101,14 +101,17 @@ function createArrayProxy(target: any, readonly = false) {
         const reactifier = iteratingArrayMethods[key];
 
         return (...args: any[]) => {
-          return originMethod.apply(
-            target,
-            [
-              (...methodArgs: any[]) => {
-                reactifier(methodArgs, readonly);
-                return createProxy(args[0](...methodArgs), readonly);
-              },
-            ].concat(args.slice(1))
+          return createProxy(
+            originMethod.apply(
+              target,
+              [
+                (...methodArgs: any[]) => {
+                  reactifier(methodArgs, readonly);
+                  return args[0](...methodArgs);
+                },
+              ].concat(args.slice(1))
+            ),
+            readonly
           );
         };
       }

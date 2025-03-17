@@ -1,6 +1,6 @@
 {
   "name": "bonsify",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "description": "Patterns for well-structured, artfully maintained components and state management.",
   "keywords": [
     "state",
