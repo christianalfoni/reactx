@@ -1,3 +1,5 @@
+import { PROXY_TARGET } from "./proxy";
+
 export function merge<T extends Record<string, any>[]>(
   ...sources: T
 ): UnionToIntersection<T[number]> {
@@ -5,22 +7,17 @@ export function merge<T extends Record<string, any>[]>(
   const mergedProxy = new Proxy(
     {},
     {
-      get(_, key: any) {
+      get(target, key: any) {
+        if (key === PROXY_TARGET) {
+          return { target, readonly: true };
+        }
+
         // Look through all sources for the property
         for (const source of sources) {
           if (key in source) {
-            const value = source[key];
-
-            // Handle functions by binding them to their original source
-            if (typeof value === "function") {
-              return value.bind(source);
-            }
-
-            return value;
+            return source[key];
           }
         }
-
-        return undefined;
       },
       set(target, key: any, value) {
         // Look through all sources for the property
@@ -29,8 +26,6 @@ export function merge<T extends Record<string, any>[]>(
             return (source[key] = value);
           }
         }
-
-        return Reflect.set(target, key, value);
       },
       // Allow property existence checks
       has(_, key) {

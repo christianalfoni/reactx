@@ -43,7 +43,7 @@ const iteratingArrayMethods = {
   },
 };
 
-const PROXY_TARGET = Symbol("PROXY_TARGET");
+export const PROXY_TARGET = Symbol("PROXY_TARGET");
 
 function createArrayProxy(target: any, readonly = false) {
   return new Proxy(target, {

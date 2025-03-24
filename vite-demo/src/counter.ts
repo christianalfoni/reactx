@@ -9,8 +9,11 @@ type ItemDTO = {
 type Item = ReturnType<typeof Item>;
 
 function Item(data: ItemDTO) {
-  const item = reactive({
-    ...data,
+  console.log("DATA", data);
+  const item = reactive.merge(data, {
+    increase() {
+      data.count++;
+    },
   });
 
   return item;
@@ -24,10 +27,13 @@ export function Counter(utils: Utils) {
     items: items.view,
     addItem() {
       const id = Date.now().toString();
-      items.data[id] = Item({ id, count: 0 });
+      items.data[id] = { id, count: 0 };
     },
     deleteItem(id: string) {
       delete items.data[id];
+    },
+    updateItem(id: string, count: number) {
+      items.data[id].count = count;
     },
   });
 

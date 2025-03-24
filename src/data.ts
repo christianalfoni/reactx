@@ -42,4 +42,12 @@ export function data<T extends DTO, K extends DTO>(
     lookup: reactive.readonly(lookup),
     list: reactive.readonly(view),
   };
+
+  function removeByIndex(id: string) {
+    const index = view.findIndex((view) => view.id === id);
+
+    if (index !== -1) {
+      view.splice(index, 1);
+    }
+  }
 }
