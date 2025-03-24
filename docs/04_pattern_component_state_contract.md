@@ -30,7 +30,7 @@ function Counter({ root }) {
     increase,
   });
 
-  return counter;
+  return reactive.readonly(counter);
 
   function incerase() {
     counter.count++;
@@ -45,9 +45,9 @@ export function Root() {
     },
   });
 
-  const counter = createCounter(root);
+  const counter = Counter({ root });
 
-  return root;
+  return reactive.readonly(root);
 }
 ```
 

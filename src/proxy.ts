@@ -46,10 +46,18 @@ const iteratingArrayMethods = {
 const PROXY_TARGET = Symbol("PROXY_TARGET");
 
 function createArrayProxy(target: any, readonly = false) {
-  // We also observe the array itself to track mutations
-  getCurrentObserver()?.observe(target);
-
   return new Proxy(target, {
+    ownKeys(target) {
+      getCurrentObserver()?.observe(target);
+      return Reflect.ownKeys(target);
+    },
+    getOwnPropertyDescriptor(target, key) {
+      if (typeof key === "string") {
+        getCurrentObserver()?.observe(target, key);
+      }
+
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
     has(target, key) {
       const result = Reflect.has(target, key);
 
@@ -64,6 +72,11 @@ function createArrayProxy(target: any, readonly = false) {
 
       if (key === PROXY_TARGET) {
         return { target, readonly };
+      }
+
+      if (key === Symbol.iterator) {
+        getCurrentObserver()?.observe(target);
+        return result;
       }
 
       if (typeof key === "symbol") {
@@ -96,6 +109,7 @@ function createArrayProxy(target: any, readonly = false) {
       }
 
       if (key in iteratingArrayMethods) {
+        getCurrentObserver()?.observe(target);
         const originMethod = target[key];
         // @ts-ignore
         const reactifier = iteratingArrayMethods[key];
@@ -140,7 +154,7 @@ function createArrayProxy(target: any, readonly = false) {
       if (observers) {
         const currentObservers = Array.from(observers);
         for (const observer of currentObservers) {
-          observer.notify(target);
+          observer.notify(target, key);
         }
       }
 
@@ -150,7 +164,21 @@ function createArrayProxy(target: any, readonly = false) {
 }
 
 function createObjectProxy(target: any, readonly = false) {
+  // Observe the object itself to track enumeration operations like Object.values or for-of loops
+  getCurrentObserver()?.observe(target);
+
   return new Proxy(target, {
+    ownKeys(target) {
+      getCurrentObserver()?.observe(target);
+      return Reflect.ownKeys(target);
+    },
+    getOwnPropertyDescriptor(target, key) {
+      if (typeof key === "string") {
+        getCurrentObserver()?.observe(target, key);
+      }
+
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
     has(target, key) {
       const result = Reflect.has(target, key);
 
@@ -165,6 +193,11 @@ function createObjectProxy(target: any, readonly = false) {
 
       if (key === PROXY_TARGET) {
         return { target, readonly };
+      }
+
+      if (key === Symbol.iterator) {
+        getCurrentObserver()?.observe(target);
+        return result;
       }
 
       if (
@@ -206,6 +239,7 @@ function createObjectProxy(target: any, readonly = false) {
       if (observers) {
         const currentObservers = Array.from(observers);
         for (const observer of currentObservers) {
+          observer.notify(target);
           observer.notify(target, key);
         }
       }

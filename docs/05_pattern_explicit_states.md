@@ -16,25 +16,22 @@ type Session = {
 You describe more correctly the specific states a session can be in and what behavior is available in each state:
 
 ```ts
-type SessionAuthenticated = {
+type AUTHENTICATED = {
   current: "AUTHENTICATED";
   user: UserDTO;
   signout(): void;
 };
 
-type SessionUnauthenticated = {
+type UNAUTHENTICATED = {
   current: "UNAUTHENTICATED";
   signin(): void;
 };
 
-type SessionAuthenticating = {
+type AUTHENTICATING = {
   current: "AUTHENTICATING";
 };
 
-type SessionState =
-  | SessionAuthenticated
-  | SessionUnauthenticated
-  | SessionAuthenticating;
+type SessionState = AUTHENTICATED | UNAUTHENTICATED | AUTHENTICATING;
 ```
 
 This has several benefits:

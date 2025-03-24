@@ -1,29 +1,35 @@
 import { reactive } from "bonsify";
 import type { Utils } from "./utils";
 
-export const createApp = (utils: Utils) =>
-  reactive({
-    items: [] as Array<{
-      id: number;
-      increase(): void;
-      counter: Promise<{ count: number }>;
-    }>,
+type ItemDTO = {
+  id: string;
+  count: number;
+};
+
+type Item = ReturnType<typeof Item>;
+
+function Item(data: ItemDTO) {
+  const item = reactive({
+    ...data,
+  });
+
+  return item;
+}
+
+export function Counter(utils: Utils) {
+  const items = reactive.data<Item>();
+
+  const counter = reactive({
+    count: 0,
+    items: items.list,
     addItem() {
-      this.items.push(
-        reactive({
-          id: this.items.length,
-          async increase() {
-            const counter = await this.counter;
-            counter.count++;
-          },
-          counter: utils.fetchCounter().then(reactive),
-        })
-      );
+      const id = Date.now().toString();
+      items.data[id] = Item({ id, count: 0 });
     },
-    clearItemsBySettingLengthTo0() {
-      this.items.length = 0;
-    },
-    clearItemsBySettingArrayToEmpty() {
-      this.items = reactive([]);
+    deleteItem(id: string) {
+      delete items.data[id];
     },
   });
+
+  return reactive.readonly(counter);
+}

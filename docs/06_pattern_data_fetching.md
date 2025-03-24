@@ -84,11 +84,11 @@ If you use a revalidation approach to data fetching the todos array and each tod
 
 Normally this is no concern as reconciliation is fast. But if you are displaying a lot of todos where each todo has a complex UI you risk performance issues.
 
-**Local mutations** strategy is what best optimises references and therefor reconciliation. After that **Automatic sync** where you subscribe to specific changes in the data also best optimises references and therefor reconciliation. Make sure you reflect on how your data fetching affects your data references and the reconciliation of components. It can be a good idea to default to **Revalidate on mutations**, but optimise with **Local mutation** or a change subscription if available.
+**Local mutations** strategy is what best optimises references and therefor reconciliation. After that **Automatic sync** where you subscribe to specific changes in the data also best optimises references and therefor reconciliation. We use **Bonsify** for the optimal user experience, which means you should embrace **local mutation** and **subscriptions** to specific changes.
 
 ## Extending data
 
-In the examples above we are exposing data directly to components, but you might want to rather extend data with some state management that exposes the data in a more controlled way.
+In the examples above we are exposing data directly to components, but you typically want to be able to make changes to it as well. Since all state is `readonly` you achieve this by just extending the data with state management.
 
 ```ts
 function Todo({ data }) {
@@ -118,68 +118,3 @@ function Data({ persistence }) {
 ```
 
 Now we are hiding data from the components and gain control of how components interact with it.
-
-## Optimistic data
-
-With **local mutations** you are free to change data "in place" and rather revert it if the background server mutation fails. But with revalidation you want to show data that is "in flight", often with some UI indication that shows it is loading or show the data as optimistic data. This can be done by exposing a mutation state:
-
-```ts
-function Data({ persistence }) {
-  const data = reactive({
-    todos: [],
-    addingTodo: undefined,
-    addTodo,
-  });
-
-  persistence.todos.subscribe((todos) => {
-    data.todos = todos;
-  });
-
-  return data;
-
-  async function revalidateTodos() {
-    data.todos = await persistence.todos.fetch();
-  }
-
-  async function addTodo(todo) {
-    data.addingTodo = {
-      status: "pending",
-      todo,
-    };
-    try {
-      await persistence.todos.add(todo);
-      await data.revalidateTodos();
-      data.addingTodo = undefined;
-    } catch (error) {
-      data.addingTodo = {
-        status: "error",
-        todo,
-        error,
-      };
-    }
-  }
-}
-```
-
-A component can now use this state to show a temporary todo:
-
-```tsx
-function Todos({ state }) {
-  return (
-    <ul>
-      {state.addingTodo?.status === "pending" ? (
-        <li>Pending: {state.addingTodo.todo.title}</li>
-      ) : null}
-      {state.addingTodo?.status === "error" ? (
-        <li>
-          Error: {state.addingTodo.todo.title} -{" "}
-          {state.addingTodo.error.message}
-        </li>
-      ) : null}
-      {state.todos.map((todo) => (
-        <li key={todo.id}>{todo.title}</li>
-      ))}
-    </ul>
-  );
-}
-```
