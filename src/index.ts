@@ -1,4 +1,4 @@
-import { data } from "./data";
+import { view } from "./view";
 import { merge } from "./merge";
 import { createProxy } from "./proxy";
 
@@ -21,4 +21,4 @@ function readonly<T extends Record<string, any>>(value: T): T {
 
 reactive.readonly = readonly;
 reactive.merge = merge;
-reactive.data = data;
+reactive.view = view;

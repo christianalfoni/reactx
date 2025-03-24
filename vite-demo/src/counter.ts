@@ -17,11 +17,11 @@ function Item(data: ItemDTO) {
 }
 
 export function Counter(utils: Utils) {
-  const items = reactive.data<Item>();
+  const items = reactive.view(Item);
 
   const counter = reactive({
     count: 0,
-    items: items.list,
+    items: items.view,
     addItem() {
       const id = Date.now().toString();
       items.data[id] = Item({ id, count: 0 });
