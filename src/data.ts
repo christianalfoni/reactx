@@ -1,6 +1,11 @@
 import { reactive } from ".";
 
-export function data<T extends { id: string }>(initialData?: T[]) {
+export type Data<T extends { id: string }> = {
+  data: Record<string, T>;
+  list: readonly T[];
+};
+
+export function data<T extends { id: string }>(initialData?: T[]): Data<T> {
   const list = reactive<T[]>([]);
   const data = new Proxy<Record<string, T>>(
     {},
