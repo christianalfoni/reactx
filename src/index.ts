@@ -1,13 +1,13 @@
-import { view } from "./view";
+import { data, DTO } from "./data";
 import { merge } from "./merge";
 import { createProxy } from "./proxy";
 
 export { observer, Observer } from "./observer";
 
 export namespace reactive {
-  export type Data<T extends { id: string }> = {
+  export type Data<T extends DTO, K extends DTO> = {
     data: Record<string, T>;
-    list: readonly T[];
+    view: readonly K[];
   };
 }
 
@@ -21,4 +21,4 @@ function readonly<T extends Record<string, any>>(value: T): T {
 
 reactive.readonly = readonly;
 reactive.merge = merge;
-reactive.view = view;
+reactive.data = data;

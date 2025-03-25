@@ -4,14 +4,14 @@ export type DTO = {
   id: string;
 };
 
-export type View<T extends DTO, K extends DTO> = {
+export type Data<T extends DTO, K extends DTO> = {
   data: Record<string, T>;
   view: readonly K[];
 };
 
-export function view<T extends DTO, K extends DTO>(
+export function data<T extends DTO, K extends DTO>(
   constr: (data: T) => K
-): View<T, K> {
+): Data<T, K> {
   const view = reactive<K[]>([]);
   const data = new Proxy<Record<string, T>>(
     {},
