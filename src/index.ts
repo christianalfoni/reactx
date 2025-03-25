@@ -7,7 +7,8 @@ export { observer, Observer } from "./observer";
 export namespace reactive {
   export type Data<T extends DTO, K extends DTO> = {
     data: Record<string, T>;
-    view: readonly K[];
+    lookup: Record<string, K>;
+    list: readonly K[];
   };
 }
 
