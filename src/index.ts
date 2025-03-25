@@ -8,7 +8,7 @@ export namespace reactive {
   export type Data<T extends DTO, K extends DTO> = {
     data: Record<string, T>;
     lookup: Record<string, K>;
-    list: readonly K[];
+    list: K[];
   };
 }
 
