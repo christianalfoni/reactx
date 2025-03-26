@@ -2,25 +2,14 @@ import { reactive } from "bonsify";
 import "./App.css";
 import { Counter } from "./counter";
 import { utils } from "./utils";
-import { Suspense, use } from "react";
+import { Suspense } from "react";
 
 const counter = Counter(utils());
-
-const reactiveTest = reactive({ count: 0 });
-const test = reactive.merge(reactiveTest, {
-  increase() {
-    reactiveTest.count++;
-  },
-});
-
-const wrappedTest = reactive.readonly(test);
 
 function App() {
   console.log("Render App");
   return (
     <div>
-      <h1 onClick={() => wrappedTest.increase()}>BLIP {wrappedTest.count}</h1>
-
       <button
         onClick={() => {
           counter.addItem();

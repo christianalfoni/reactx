@@ -45,7 +45,7 @@ const iteratingArrayMethods = {
 
 export const PROXY_TARGET = Symbol("PROXY_TARGET");
 
-function createArrayProxy(target: any, readonly = false) {
+function createArrayProxy(target: any, readonly = false, targets: any[] = []) {
   return new Proxy(target, {
     ownKeys(target) {
       getCurrentObserver()?.observe(target);
@@ -99,6 +99,10 @@ function createArrayProxy(target: any, readonly = false) {
           const result = originMethod.apply(target, args);
           const currentObservers = Array.from(observers);
 
+          for (const target of targets) {
+            readonlyProxyCache.delete(target);
+          }
+
           for (const observer of currentObservers) {
             observer.notify(target);
             observer.notify(target, "length");
@@ -132,7 +136,7 @@ function createArrayProxy(target: any, readonly = false) {
 
       getCurrentObserver()?.observe(target, key);
 
-      return createProxy(result, readonly);
+      return createProxy(result, readonly, [...targets, target]);
     },
     set(target, key, value) {
       if (readonly) {
@@ -153,6 +157,9 @@ function createArrayProxy(target: any, readonly = false) {
 
       if (observers) {
         const currentObservers = Array.from(observers);
+        for (const target of targets) {
+          readonlyProxyCache.delete(target);
+        }
         for (const observer of currentObservers) {
           observer.notify(target, key);
         }
@@ -163,7 +170,7 @@ function createArrayProxy(target: any, readonly = false) {
   });
 }
 
-function createObjectProxy(target: any, readonly = false) {
+function createObjectProxy(target: any, readonly = false, targets: any[]) {
   // Observe the object itself to track enumeration operations like Object.values or for-of loops
   getCurrentObserver()?.observe(target);
 
@@ -217,7 +224,7 @@ function createObjectProxy(target: any, readonly = false) {
 
       getCurrentObserver()?.observe(target, key);
 
-      return createProxy(result, readonly);
+      return createProxy(result, readonly, targets.concat(result));
     },
     set(target, key, value) {
       if (readonly) {
@@ -238,6 +245,9 @@ function createObjectProxy(target: any, readonly = false) {
 
       if (observers) {
         const currentObservers = Array.from(observers);
+        for (const target of targets) {
+          readonlyProxyCache.delete(target);
+        }
         for (const observer of currentObservers) {
           observer.notify(target);
           observer.notify(target, key);
@@ -246,10 +256,44 @@ function createObjectProxy(target: any, readonly = false) {
 
       return wasSet;
     },
+    deleteProperty(target, key) {
+      if (readonly) {
+        throw new Error("Cannot mutate a readonly object");
+      }
+
+      const wasDeleted = Reflect.deleteProperty(target, key);
+
+      if (typeof key === "symbol") {
+        return wasDeleted;
+      }
+
+      if (!wasDeleted) {
+        return wasDeleted;
+      }
+
+      const observers = allObservations.get(target);
+
+      if (observers) {
+        const currentObservers = Array.from(observers);
+        for (const target of targets) {
+          readonlyProxyCache.delete(target);
+        }
+        for (const observer of currentObservers) {
+          observer.notify(target);
+          observer.notify(target, key);
+        }
+      }
+
+      return wasDeleted;
+    },
   });
 }
 
-export function createProxy(target: unknown, readonly = false) {
+export function createProxy(
+  target: unknown,
+  readonly = false,
+  targets: any[] = []
+) {
   if (target === null || typeof target !== "object") {
     return target;
   }
@@ -282,9 +326,9 @@ export function createProxy(target: unknown, readonly = false) {
   let proxy;
 
   if (Array.isArray(target)) {
-    proxy = createArrayProxy(target, readonly);
+    proxy = createArrayProxy(target, readonly, targets.concat(target));
   } else {
-    proxy = createObjectProxy(target, readonly);
+    proxy = createObjectProxy(target, readonly, targets.concat(target));
   }
 
   if (readonly) {
