@@ -269,6 +269,216 @@ describe("reactive and readonly - nested combinations", () => {
     // Access nested value to register observation
     outer.nested.value;
     untrack();
+  });
+
+  // Test for object observation when adding or deleting keys
+  it("notifies the observer when adding or deleting object keys", () => {
+    const obj = reactive<Record<string, string>>({ existingKey: "value" });
+    let addNotified = false;
+    let deleteNotified = false;
+
+    // Test adding a key
+    const addObserver = new Observer();
+    const untrackAdd = addObserver.track();
+    // Access the object to register observation
+    obj.existingKey;
+    untrackAdd();
+
+    addObserver.subscribe(() => {
+      addNotified = true;
+    });
+
+    // Add a new key
+    obj.newKey = "new value";
+    expect(addNotified).toBe(true);
+    expect(obj.newKey).toBe("new value");
+
+    // Test deleting a key
+    const deleteObserver = new Observer();
+    const untrackDelete = deleteObserver.track();
+    // Access the object to register observation
+    obj.existingKey;
+    untrackDelete();
+
+    deleteObserver.subscribe(() => {
+      deleteNotified = true;
+    });
+
+    // Delete a key
+    delete obj.existingKey;
+    expect(deleteNotified).toBe(true);
+    expect(obj.existingKey).toBeUndefined();
+  });
+
+  // Test for array observation when mutating using functions or setting/deleting indexes
+  it("notifies the observer when array mutates using functions or index operations", () => {
+    const arr = reactive([1, 2, 3]);
+    let methodNotified = false;
+    let indexSetNotified = false;
+    let indexDeleteNotified = false;
+
+    // Test array mutation using methods
+    const methodObserver = new Observer();
+    const untrackMethod = methodObserver.track();
+    // Access the array to register observation
+    arr.length;
+    untrackMethod();
+
+    methodObserver.subscribe(() => {
+      methodNotified = true;
+    });
+
+    // Mutate using array method
+    arr.push(4);
+    expect(methodNotified).toBe(true);
+    expect(arr).toEqual([1, 2, 3, 4]);
+
+    // Test setting an index
+    const indexSetObserver = new Observer();
+    const untrackIndexSet = indexSetObserver.track();
+    // Access the array to register observation
+    arr.length;
+    untrackIndexSet();
+
+    indexSetObserver.subscribe(() => {
+      indexSetNotified = true;
+    });
+
+    // Set an index
+    arr[0] = 100;
+    expect(indexSetNotified).toBe(true);
+    expect(arr[0]).toBe(100);
+
+    // Test deleting an index
+    const indexDeleteObserver = new Observer();
+    const untrackIndexDelete = indexDeleteObserver.track();
+    // Access the array to register observation
+    arr.length;
+    untrackIndexDelete();
+
+    indexDeleteObserver.subscribe(() => {
+      indexDeleteNotified = true;
+    });
+
+    // Delete an index
+    delete arr[1];
+    expect(indexDeleteNotified).toBe(true);
+    expect(arr[1]).toBeUndefined();
+  });
+
+  // Tests for reference changes in readonly reactive state when nested mutations occur
+  describe("readonly reference changes on nested mutations", () => {
+    it("changes object references within readonly state when nested objects mutate", () => {
+      // Setup: Create a nested structure with a readonly wrapper
+      const nestedObj = reactive({ value: 1 });
+      const outerObj = reactive({ nested: nestedObj });
+      const readonlyOuter = reactive.readonly(outerObj);
+
+      // Capture initial references
+      const initialReadonlyOuter = readonlyOuter;
+      const initialNestedRef = readonlyOuter.nested;
+
+      // Mutate the nested object through its reactive reference
+      nestedObj.value = 2;
+
+      // Verify the readonly wrapper reference hasn't changed
+      expect(readonlyOuter).toBe(initialReadonlyOuter);
+
+      // Verify the nested object reference has changed in the readonly wrapper
+      expect(readonlyOuter.nested).not.toBe(initialNestedRef);
+
+      // Verify the value was actually updated
+      expect(readonlyOuter.nested.value).toBe(2);
+    });
+
+    it("changes array references within readonly state when nested arrays mutate", () => {
+      // Setup: Create a nested structure with a readonly wrapper
+      const nestedArray = reactive([1, 2, 3]);
+      const outerObj = reactive({ items: nestedArray });
+      const readonlyOuter = reactive.readonly(outerObj);
+
+      // Capture initial references
+      const initialReadonlyOuter = readonlyOuter;
+      const initialItemsRef = readonlyOuter.items;
+
+      // Mutate the nested array through its reactive reference
+      nestedArray.push(4);
+
+      // Verify the readonly wrapper reference hasn't changed
+      expect(readonlyOuter).toBe(initialReadonlyOuter);
+
+      // Verify the nested array reference has changed in the readonly wrapper
+      expect(readonlyOuter.items).not.toBe(initialItemsRef);
+
+      // Verify the array was actually updated
+      expect(readonlyOuter.items).toEqual([1, 2, 3, 4]);
+    });
+
+    it("changes nested object references when properties are added or deleted", () => {
+      // Setup: Create a nested structure with a readonly wrapper
+      const nestedObj = reactive<Record<string, any>>({ prop1: "value1" });
+      const outerObj = reactive({ data: nestedObj });
+      const readonlyOuter = reactive.readonly(outerObj);
+
+      // Capture initial references
+      const initialDataRef = readonlyOuter.data;
+
+      // Add a property to the nested object
+      nestedObj.prop2 = "value2";
+
+      // Verify the nested object reference has changed
+      expect(readonlyOuter.data).not.toBe(initialDataRef);
+      expect(readonlyOuter.data.prop2).toBe("value2");
+
+      // Capture the new reference
+      const secondDataRef = readonlyOuter.data;
+
+      // Delete a property from the nested object
+      delete nestedObj.prop1;
+
+      // Verify the nested object reference has changed again
+      expect(readonlyOuter.data).not.toBe(secondDataRef);
+      expect(readonlyOuter.data.prop1).toBeUndefined();
+    });
+
+    it("changes nested array references when using array methods or index operations", () => {
+      // Setup: Create a nested structure with a readonly wrapper
+      const nestedArray = reactive([1, 2, 3]);
+      const outerObj = reactive({ list: nestedArray });
+      const readonlyOuter = reactive.readonly(outerObj);
+
+      // Capture initial reference
+      const initialListRef = readonlyOuter.list;
+
+      // Mutate using array method
+      nestedArray.push(4);
+
+      // Verify reference changed
+      expect(readonlyOuter.list).not.toBe(initialListRef);
+      expect(readonlyOuter.list).toEqual([1, 2, 3, 4]);
+
+      // Capture new reference
+      const secondListRef = readonlyOuter.list;
+
+      // Mutate using index
+      nestedArray[0] = 100;
+
+      // Verify reference changed again
+      expect(readonlyOuter.list).not.toBe(secondListRef);
+      expect(readonlyOuter.list[0]).toBe(100);
+    });
+  });
+
+  it("allows observation of reactive nested in readonly through source object", () => {
+    const nested = reactive({ value: 1 });
+    const outer = reactive.readonly(reactive({ nested }));
+    let notified = false;
+
+    const observer = new Observer();
+    const untrack = observer.track();
+    // Access nested value to register observation
+    outer.nested.value;
+    untrack();
 
     observer.subscribe(() => {
       notified = true;

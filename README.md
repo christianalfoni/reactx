@@ -2,7 +2,7 @@
 
 > Single reactive primitive for performant state management in React
 
-State management is most performant when you use a mutable reactive primitive external to components and the reconciler. **Bonsify** provides a single reactive primitive of `reactive`. Combine this with the patterns introduced in the following sections, and you can scale your application to any size without performance issues.
+State management is most performant when you use a mutable reactive primitive external to components and the reconciler. **Bonsify** provides a single reactive primitive of `reactive`. It is mutable, but from React it is readonly and guarantees value comparison. That means you can still use `useMemo`, `useEffect` etc. Combine this with the patterns introduced in the following sections, and you can scale your application to any size without performance issues.
 
 - [Constructor](./docs/01_pattern_constructor.md)
 - [Protected State](./docs/02_pattern_protected_state.md)

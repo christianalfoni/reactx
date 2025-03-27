@@ -1,4 +1,3 @@
-import { merge } from "./merge";
 import { createProxy } from "./proxy";
 
 export { observer, Observer } from "./observer";
@@ -12,4 +11,3 @@ function readonly<T extends Record<string, any>>(value: T): T {
 }
 
 reactive.readonly = readonly;
-reactive.merge = merge;

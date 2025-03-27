@@ -3,6 +3,15 @@ import { allObservations, getCurrentObserver } from "./observer";
 const proxyCache = new WeakMap<any, any>();
 const readonlyProxyCache = new WeakMap<any, any>();
 
+// We clear the readonly proxy cache for targets that has
+// been effected by a mutation, which is a clever way
+// to ensure value comparison is correct in React
+function clearReadonlyProxyCache(targets: any[]) {
+  for (const target of targets) {
+    readonlyProxyCache.delete(target);
+  }
+}
+
 const mutatingArrayMethods = [
   "push",
   "pop",
@@ -14,32 +23,32 @@ const mutatingArrayMethods = [
 ];
 
 const iteratingArrayMethods = {
-  map: (args: any[], readonly: boolean) => {
-    args[0] = createProxy(args[0], readonly);
+  map: (args: any[], readonly: boolean, targets: any[]) => {
+    args[0] = createProxy(args[0], readonly, targets);
   },
-  filter: (args: any[], readonly: boolean) => {
-    args[0] = createProxy(args[0], readonly);
+  filter: (args: any[], readonly: boolean, targets: any[]) => {
+    args[0] = createProxy(args[0], readonly, targets);
   },
-  reduce: (args: any[], readonly: boolean) => {
-    args[1] = createProxy(args[1], readonly);
+  reduce: (args: any[], readonly: boolean, targets: any[]) => {
+    args[1] = createProxy(args[1], readonly, targets);
   },
-  reduceRight: (args: any[], readonly: boolean) => {
-    args[1] = createProxy(args[1], readonly);
+  reduceRight: (args: any[], readonly: boolean, targets: any[]) => {
+    args[1] = createProxy(args[1], readonly, targets);
   },
-  find: (args: any[], readonly: boolean) => {
-    args[0] = createProxy(args[0], readonly);
+  find: (args: any[], readonly: boolean, targets: any[]) => {
+    args[0] = createProxy(args[0], readonly, targets);
   },
-  findIndex: (args: any[], readonly: boolean) => {
-    args[0] = createProxy(args[0], readonly);
+  findIndex: (args: any[], readonly: boolean, targets: any[]) => {
+    args[0] = createProxy(args[0], readonly, targets);
   },
-  forEach: (args: any[], readonly: boolean) => {
-    args[0] = createProxy(args[0], readonly);
+  forEach: (args: any[], readonly: boolean, targets: any[]) => {
+    args[0] = createProxy(args[0], readonly, targets);
   },
-  some: (args: any[], readonly: boolean) => {
-    args[0] = createProxy(args[0], readonly);
+  some: (args: any[], readonly: boolean, targets: any[]) => {
+    args[0] = createProxy(args[0], readonly, targets);
   },
-  every: (args: any[], readonly: boolean) => {
-    args[0] = createProxy(args[0], readonly);
+  every: (args: any[], readonly: boolean, targets: any[]) => {
+    args[0] = createProxy(args[0], readonly, targets);
   },
 };
 
@@ -85,11 +94,6 @@ function createArrayProxy(target: any, readonly = false, targets: any[] = []) {
 
       if (mutatingArrayMethods.includes(key)) {
         const originMethod = target[key];
-        const observers = allObservations.get(target);
-
-        if (!observers) {
-          return originMethod;
-        }
 
         return (...args: any[]) => {
           if (readonly) {
@@ -97,11 +101,16 @@ function createArrayProxy(target: any, readonly = false, targets: any[] = []) {
           }
 
           const result = originMethod.apply(target, args);
-          const currentObservers = Array.from(observers);
 
-          for (const target of targets) {
-            readonlyProxyCache.delete(target);
+          clearReadonlyProxyCache(targets);
+
+          const observers = allObservations.get(target);
+
+          if (!observers) {
+            return result;
           }
+
+          const currentObservers = Array.from(observers);
 
           for (const observer of currentObservers) {
             observer.notify(target);
@@ -119,24 +128,23 @@ function createArrayProxy(target: any, readonly = false, targets: any[] = []) {
         const reactifier = iteratingArrayMethods[key];
 
         return (...args: any[]) => {
-          return createProxy(
-            originMethod.apply(
-              target,
-              [
-                (...methodArgs: any[]) => {
-                  reactifier(methodArgs, readonly);
-                  return args[0](...methodArgs);
-                },
-              ].concat(args.slice(1))
-            ),
-            readonly
+          const result = originMethod.apply(
+            target,
+            [
+              (...methodArgs: any[]) => {
+                reactifier(methodArgs, readonly, targets.concat(target));
+                return args[0](...methodArgs);
+              },
+            ].concat(args.slice(1))
           );
+
+          return createProxy(result, readonly, targets);
         };
       }
 
       getCurrentObserver()?.observe(target, key);
 
-      return createProxy(result, readonly, [...targets, target]);
+      return createProxy(result, readonly, targets);
     },
     set(target, key, value) {
       if (readonly) {
@@ -153,19 +161,49 @@ function createArrayProxy(target: any, readonly = false, targets: any[] = []) {
         return wasSet;
       }
 
+      clearReadonlyProxyCache(targets);
+
       const observers = allObservations.get(target);
 
       if (observers) {
         const currentObservers = Array.from(observers);
-        for (const target of targets) {
-          readonlyProxyCache.delete(target);
-        }
         for (const observer of currentObservers) {
+          observer.notify(target);
           observer.notify(target, key);
         }
       }
 
       return wasSet;
+    },
+    deleteProperty(target, key) {
+      if (readonly) {
+        throw new Error(`Cannot mutate a readonly array`);
+      }
+
+      const wasDeleted = Reflect.deleteProperty(target, key);
+
+      if (typeof key === "symbol") {
+        return wasDeleted;
+      }
+
+      if (!wasDeleted) {
+        return wasDeleted;
+      }
+
+      clearReadonlyProxyCache(targets);
+
+      const observers = allObservations.get(target);
+
+      if (observers) {
+        const currentObservers = Array.from(observers);
+
+        for (const observer of currentObservers) {
+          observer.notify(target);
+          observer.notify(target, key);
+        }
+      }
+
+      return wasDeleted;
     },
   });
 }
@@ -224,7 +262,7 @@ function createObjectProxy(target: any, readonly = false, targets: any[]) {
 
       getCurrentObserver()?.observe(target, key);
 
-      return createProxy(result, readonly, targets.concat(result));
+      return createProxy(result, readonly, targets);
     },
     set(target, key, value) {
       if (readonly) {
@@ -241,13 +279,13 @@ function createObjectProxy(target: any, readonly = false, targets: any[]) {
         return wasSet;
       }
 
+      clearReadonlyProxyCache(targets);
+
       const observers = allObservations.get(target);
 
       if (observers) {
         const currentObservers = Array.from(observers);
-        for (const target of targets) {
-          readonlyProxyCache.delete(target);
-        }
+
         for (const observer of currentObservers) {
           observer.notify(target);
           observer.notify(target, key);
@@ -271,13 +309,13 @@ function createObjectProxy(target: any, readonly = false, targets: any[]) {
         return wasDeleted;
       }
 
+      clearReadonlyProxyCache(targets);
+
       const observers = allObservations.get(target);
 
       if (observers) {
         const currentObservers = Array.from(observers);
-        for (const target of targets) {
-          readonlyProxyCache.delete(target);
-        }
+
         for (const observer of currentObservers) {
           observer.notify(target);
           observer.notify(target, key);
@@ -315,6 +353,8 @@ export function createProxy(
     }
   }
 
+  let newTargets = [...targets, target];
+
   const cachedProxy = readonly
     ? readonlyProxyCache.get(target)
     : proxyCache.get(target);
@@ -326,9 +366,9 @@ export function createProxy(
   let proxy;
 
   if (Array.isArray(target)) {
-    proxy = createArrayProxy(target, readonly, targets.concat(target));
+    proxy = createArrayProxy(target, readonly, newTargets);
   } else {
-    proxy = createObjectProxy(target, readonly, targets.concat(target));
+    proxy = createObjectProxy(target, readonly, newTargets);
   }
 
   if (readonly) {
