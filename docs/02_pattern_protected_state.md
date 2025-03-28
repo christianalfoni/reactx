@@ -2,8 +2,6 @@
 
 Protecting state prevents components from manipulating state in unpredictable ways. You rather force components to use the functions exposed from the public interface.
 
-This is how **Bonsify** handles protecting state:
-
 ```ts
 import { reactive } from "bonsify";
 
@@ -21,7 +19,7 @@ function Counter() {
 }
 ```
 
-Now the `count` can not be changed from components.
+Now the `count` can not be changed from components or other parts of the application.
 
 You might be composing state where you can choose to protect or not:
 

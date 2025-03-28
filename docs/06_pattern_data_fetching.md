@@ -118,3 +118,5 @@ function Data({ persistence }) {
 ```
 
 Now we are hiding data from the components and gain control of how components interact with it.
+
+## Deriving data

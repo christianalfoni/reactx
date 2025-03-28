@@ -5,7 +5,7 @@ It is important to highlight that implementing new concepts often requires sever
 ```ts
 import { reactive } from "bonsify";
 
-// The name in PascalCase and dependencies as an object
+// The name in PascalCase and params as an object
 export function Counter({ initialCount }) {
   // Constructor
   const counter = reactive({
