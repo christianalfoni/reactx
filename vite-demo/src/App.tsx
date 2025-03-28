@@ -1,31 +1,31 @@
 import { reactive } from "bonsify";
 import "./App.css";
-import { Counter } from "./counter";
-import { utils } from "./utils";
-import { Suspense } from "react";
+// import { Counter } from "./counter";
+// import { utils } from "./utils";
+import { Suspense, useEffect } from "react";
 
-const counter = Counter(utils());
+function Counter() {
+  const counter = reactive({
+    nested: {
+      count: 0,
+      increase() {
+        counter.nested.count++;
+      },
+    },
+  });
+
+  return reactive.readonly(counter);
+}
+
+const counter = Counter();
 
 function App() {
-  console.log("Render App");
+  useEffect(() => {
+    console.log(counter.nested.count);
+  }, [counter.nested]);
   return (
     <div>
-      <button
-        onClick={() => {
-          counter.addItem();
-        }}
-      >
-        Add
-      </button>
-      <h1>Count {counter.count}</h1>
-      {counter.items.map((item, index) => (
-        <div key={index}>
-          {item.count}
-          <button onClick={() => counter.updateItem(item.id, 0)}>Reset</button>
-          <button onClick={() => item.increase()}>Increase</button>
-          <button onClick={() => counter.deleteItem(item.id)}>Delete</button>
-        </div>
-      ))}
+      <h1 onClick={counter.nested.increase}>Count {counter.nested.count}</h1>
     </div>
   );
 }

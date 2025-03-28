@@ -6,8 +6,11 @@ export function reactive<T extends Record<string, any>>(value: T): T {
   return createProxy(value);
 }
 
-function readonly<T extends Record<string, any>>(value: T): T {
+function subscribe<T extends Record<string, any>>(
+  value: T,
+  notify: (snapshot: number) => void
+): T {
   return createProxy(value, true);
 }
 
-reactive.readonly = readonly;
+reactive.subscribe = subscribe;
