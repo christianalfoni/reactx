@@ -1,4 +1,4 @@
-export const PROXY_TARGET = Symbol("PROXY_TARGET");
+export const PROXY_IMMUTABLE_TARGET = Symbol("PROXY_TARGET");
 export const PROXY_SUBSCRIBE = Symbol("PROXY_SUBSCRIBE");
 export const PROXY_CONNECT = Symbol("PROXY_CONNECT");
 
@@ -21,7 +21,7 @@ export function createSubscription<T>(proxy: T): Subscription<T> {
     },
     getSnapshot(): T {
       // @ts-ignore
-      return proxy[PROXY_TARGET];
+      return proxy[PROXY_IMMUTABLE_TARGET];
     },
   };
 }
@@ -49,7 +49,7 @@ function createProxy(
     return target;
   }
 
-  if (PROXY_TARGET in target) {
+  if (PROXY_IMMUTABLE_TARGET in target) {
     // @ts-ignore
     target[PROXY_CONNECT](parentKey, emitParent);
   }
@@ -60,6 +60,7 @@ function createProxy(
 
   const isArray = Array.isArray(target);
   const subscriptions = new Set<() => void>();
+  let immutableTarget = isArray ? (target as any).slice() : { ...target };
 
   const subscribe = (update: () => void) => {
     subscriptions.add(update);
@@ -69,19 +70,19 @@ function createProxy(
   };
 
   const emitSet = (key: string, value: unknown) => {
-    target = isArray ? target.slice() : { ...target };
-    target[key] = value;
+    immutableTarget = isArray ? (target as any).slice() : { ...target };
+    immutableTarget[key] = value;
     emit();
   };
 
   const emitDelete = (key: string) => {
-    target = isArray ? target.slice() : { ...target };
-    delete target[key];
+    immutableTarget = isArray ? (target as any).slice() : { ...target };
+    delete immutableTarget[key];
     emit();
   };
 
   const emitArrayMutation = () => {
-    target = target.slice();
+    immutableTarget = (target as any).slice();
     emit();
   };
 
@@ -90,82 +91,79 @@ function createProxy(
       subscription();
     });
 
-    emitParent(parentKey, target);
+    emitParent(parentKey, immutableTarget);
   };
 
-  const proxy = new Proxy(
-    {},
-    {
-      getOwnPropertyDescriptor: (_, key) => {
-        return Reflect.getOwnPropertyDescriptor(target, key);
-      },
-      has: (_, key) => {
-        if (key === PROXY_TARGET) {
-          return true;
-        }
-
-        return Reflect.has(target, key);
-      },
-      ownKeys: () => Reflect.ownKeys(target),
-      get: (_, key) => {
-        if (key === PROXY_TARGET) {
-          return target;
-        }
-
-        if (key === PROXY_SUBSCRIBE) {
-          return subscribe;
-        }
-
-        if (key === PROXY_CONNECT) {
-          return (
-            newParentKey: string,
-            newEmitParent: (key: string, value: unknown) => void
-          ) => {
-            parentKey = newParentKey;
-            emitParent = newEmitParent;
-          };
-        }
-
-        const value = Reflect.get(target, key);
-
-        if (typeof key === "symbol") {
-          return value;
-        }
-
-        if (isArray && mutatingArrayMethods.includes(key)) {
-          return (...args: any[]) => {
-            args = args.map((arg) => createProxy(arg, key, emitSet));
-
-            const result = value.apply(target, args);
-
-            emitArrayMutation();
-
-            return result;
-          };
-        }
-
-        return createProxy(value, key, emitSet);
-      },
-      set: (_, key, value) => {
-        if (typeof key === "symbol") {
-          return false;
-        }
-
-        emitSet(key, value);
-
+  const proxy = new Proxy(target, {
+    getOwnPropertyDescriptor: (_, key) => {
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+    has: (_, key) => {
+      if (key === PROXY_IMMUTABLE_TARGET) {
         return true;
-      },
-      deleteProperty: (_, key) => {
-        if (typeof key === "symbol") {
-          return false;
-        }
+      }
 
-        emitDelete(key);
+      return Reflect.has(target, key);
+    },
+    ownKeys: () => Reflect.ownKeys(target),
+    get: (_, key) => {
+      if (key === PROXY_IMMUTABLE_TARGET) {
+        return immutableTarget;
+      }
 
-        return true;
-      },
-    }
-  );
+      if (key === PROXY_SUBSCRIBE) {
+        return subscribe;
+      }
+
+      if (key === PROXY_CONNECT) {
+        return (
+          newParentKey: string,
+          newEmitParent: (key: string, value: unknown) => void
+        ) => {
+          parentKey = newParentKey;
+          emitParent = newEmitParent;
+        };
+      }
+
+      const value = Reflect.get(target, key);
+
+      if (typeof key === "symbol") {
+        return value;
+      }
+
+      if (isArray && mutatingArrayMethods.includes(key)) {
+        return (...args: any[]) => {
+          args = args.map((arg) => createProxy(arg, key, emitSet));
+
+          const result = value.apply(target, args);
+
+          emitArrayMutation();
+
+          return result;
+        };
+      }
+
+      return createProxy(value, key, emitSet);
+    },
+    set: (target, key, value) => {
+      if (typeof key === "symbol") {
+        return false;
+      }
+
+      emitSet(key, value);
+
+      return Reflect.set(target, key, value);
+    },
+    deleteProperty: (target, key) => {
+      if (typeof key === "symbol") {
+        return false;
+      }
+
+      emitDelete(key);
+
+      return Reflect.deleteProperty(target, key);
+    },
+  });
 
   proxyCache.set(target, proxy);
 

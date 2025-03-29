@@ -32,5 +32,7 @@ export function Counter() {
     },
   });
 
+  console.log(counter);
+
   return counter;
 }
