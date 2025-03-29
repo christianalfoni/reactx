@@ -16,6 +16,6 @@
     "experimentalDecorators": true,
     "isolatedModules": true
   },
-  "include": ["src"],
+  "include": ["src", "proxy.ts"],
   "exclude": ["node_modules", "src/index.test.ts"]
 }

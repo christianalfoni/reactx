@@ -1,17 +1,13 @@
-import { reactive } from "bonsify";
-import type { Utils } from "./utils";
+import { state } from "bonsify";
 
-type ItemDTO = {
-  id: string;
-  count: number;
-};
+export type Counter = ReturnType<typeof Counter>;
 
-type Item = ReturnType<typeof Item>;
+export type Item = ReturnType<typeof Item>;
 
-function Item(data: ItemDTO) {
-  console.log("DATA", data);
-  const item = reactive({
-    ...data,
+function Item() {
+  const item = state({
+    id: Date.now(),
+    count: 0,
     increase() {
       item.count++;
     },
@@ -20,24 +16,21 @@ function Item(data: ItemDTO) {
   return item;
 }
 
-export function Counter(utils: Utils) {
-  const items = reactive({});
-  const counter = reactive({
-    count: 0,
-    get items() {
-      return Object.values(items);
-    },
+export function Counter() {
+  const counter = state({
+    items: [] as { test: Item }[],
     addItem() {
-      const id = Date.now().toString();
-      items[id] = Item({ id, count: 0 });
+      counter.items.push({
+        test: Item(),
+      });
     },
-    deleteItem(id: string) {
-      delete items[id];
-    },
-    updateItem(id: string, count: number) {
-      items[id].count = count;
+    nested: {
+      count: 0,
+      increase() {
+        counter.nested.count++;
+      },
     },
   });
 
-  return reactive.readonly(counter);
+  return counter;
 }

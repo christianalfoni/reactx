@@ -1,39 +1,46 @@
-import { reactive } from "bonsify";
+import { createSubscription, useSubscription } from "bonsify";
 import "./App.css";
-// import { Counter } from "./counter";
-// import { utils } from "./utils";
-import { Suspense, useEffect } from "react";
+import { useEffect } from "react";
+import { Counter } from "./counter";
 
-function Counter() {
-  const counter = reactive({
-    nested: {
-      count: 0,
-      increase() {
-        counter.nested.count++;
-      },
-    },
-  });
-
-  return reactive.readonly(counter);
-}
-
-const counter = Counter();
-
-function App() {
+function App({ counter }: { counter: Counter }) {
+  console.log("App");
   useEffect(() => {
     console.log(counter.nested.count);
   }, [counter.nested]);
+
   return (
     <div>
-      <h1 onClick={counter.nested.increase}>Count {counter.nested.count}</h1>
+      <Deeper counter={counter} />
+      <Nested />
+      <button onClick={counter.addItem}>Add item</button>
+      <ul>
+        {counter.items.map((item) => (
+          <li key={item.test.id} onClick={item.test.increase}>
+            {item.test.count}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
-export default function AppWrapper() {
+function Deeper({ counter }: { counter: Counter }) {
+  console.log("Deeper");
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <App />
-    </Suspense>
+    <h1 onClick={counter.nested.increase}>Count {counter.nested.count}</h1>
   );
+}
+
+function Nested() {
+  console.log("Nested");
+  return <div>hello</div>;
+}
+
+const stateSubscription = createSubscription(Counter());
+
+export default function AppWrapper() {
+  const counter = useSubscription(stateSubscription);
+
+  return <App counter={counter} />;
 }
