@@ -6,6 +6,7 @@ import { SectionCards } from "@/components/section-cards";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Data } from "./Data";
+import { useEffect, useState } from "react";
 
 const dataSubscription = createSubscription(Data());
 
@@ -15,6 +16,7 @@ export default function Page() {
   console.log(data);
 
   return null;
+
   return (
     <SidebarProvider>
       <AppSidebar variant="inset" />

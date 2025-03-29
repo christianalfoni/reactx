@@ -1,4 +1,5 @@
-export const PROXY_IMMUTABLE_TARGET = Symbol("PROXY_TARGET");
+export const PROXY_IMMUTABLE_TARGET = Symbol("PROXY_IMMUTABLE_TARGET");
+export const PROXY_TARGET = Symbol("PROXY_TARGET");
 export const PROXY_SUBSCRIBE = Symbol("PROXY_SUBSCRIBE");
 export const PROXY_CONNECT = Symbol("PROXY_CONNECT");
 
@@ -49,9 +50,10 @@ function createProxy(
     return target;
   }
 
-  if (PROXY_IMMUTABLE_TARGET in target) {
+  if (PROXY_TARGET in target) {
     // @ts-ignore
     target[PROXY_CONNECT](parentKey, emitParent);
+    target = target[PROXY_TARGET];
   }
 
   if (proxyCache.has(target)) {
@@ -60,7 +62,7 @@ function createProxy(
 
   const isArray = Array.isArray(target);
   const subscriptions = new Set<() => void>();
-  let immutableTarget = isArray ? (target as any).slice() : { ...target };
+  let immutableTarget = structuredClone(target);
 
   const subscribe = (update: () => void) => {
     subscriptions.add(update);
@@ -70,24 +72,10 @@ function createProxy(
   };
 
   const emitSet = (key: string, value: unknown) => {
-    let lastImmutable = immutableTarget;
-
-    if (isArray) {
-      console.log(
-        "Last immutable",
-        JSON.stringify(lastImmutable),
-        lastImmutable
-      );
-    }
-
     immutableTarget = isArray
       ? (immutableTarget as any).slice()
       : { ...immutableTarget };
     immutableTarget[key] = value;
-
-    if (isArray) {
-      console.log("Last immutable", immutableTarget);
-    }
 
     emit();
   };
@@ -110,13 +98,12 @@ function createProxy(
       subscription();
     });
 
-    console.log("Emit parent", parentKey, immutableTarget);
     emitParent(parentKey, immutableTarget);
   };
 
   const proxy = new Proxy(target, {
     has: (_, key) => {
-      if (key === PROXY_IMMUTABLE_TARGET) {
+      if (key === PROXY_IMMUTABLE_TARGET || key === PROXY_TARGET) {
         return true;
       }
 
@@ -124,8 +111,11 @@ function createProxy(
     },
     get: (target, key) => {
       if (key === PROXY_IMMUTABLE_TARGET) {
-        console.log("looking");
         return immutableTarget;
+      }
+
+      if (key === PROXY_TARGET) {
+        return target;
       }
 
       if (key === PROXY_SUBSCRIBE) {
@@ -168,6 +158,8 @@ function createProxy(
       }
 
       emitSet(key, value);
+
+      console.log("Set", key, value);
 
       return Reflect.set(target, key, value);
     },

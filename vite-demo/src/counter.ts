@@ -19,10 +19,9 @@ function Item() {
 export function Counter() {
   const counter = state({
     items: [] as { test: Item }[],
+    limit: 5,
     addItem() {
-      counter.items.push({
-        test: Item(),
-      });
+      counter.limit++;
     },
     nested: {
       count: 0,
