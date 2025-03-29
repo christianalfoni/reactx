@@ -1,46 +1,37 @@
-import { createSubscription, useSubscription } from "bonsify";
-import "./App.css";
-import { useEffect } from "react";
-import { Counter } from "./counter";
+import { createSubscription, state, useSubscription } from "bonsify";
+import { AppSidebar } from "@/components/app-sidebar";
+import { ChartAreaInteractive } from "@/components/chart-area-interactive";
+import { DataTable } from "@/components/data-table";
+import { SectionCards } from "@/components/section-cards";
+import { SiteHeader } from "@/components/site-header";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { Data } from "./Data";
 
-function App({ counter }: { counter: Counter }) {
-  console.log("App");
-  useEffect(() => {
-    console.log(counter.nested.count);
-  }, [counter.nested]);
+const dataSubscription = createSubscription(Data());
 
+export default function Page() {
+  const data = useSubscription(dataSubscription);
+
+  console.log(data);
+
+  return null;
   return (
-    <div>
-      <Deeper counter={counter} />
-      <Nested />
-      <button onClick={counter.addItem}>Add item</button>
-      <ul>
-        {counter.items.map((item) => (
-          <li key={item.test.id} onClick={item.test.increase}>
-            {item.test.count}
-          </li>
-        ))}
-      </ul>
-    </div>
+    <SidebarProvider>
+      <AppSidebar variant="inset" />
+      <SidebarInset>
+        <SiteHeader />
+        <div className="flex flex-1 flex-col">
+          <div className="@container/main flex flex-1 flex-col gap-2">
+            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+              <SectionCards />
+              <div className="px-4 lg:px-6">
+                <ChartAreaInteractive />
+              </div>
+              <DataTable data={data} />
+            </div>
+          </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
-}
-
-function Deeper({ counter }: { counter: Counter }) {
-  console.log("Deeper");
-  return (
-    <h1 onClick={counter.nested.increase}>Count {counter.nested.count}</h1>
-  );
-}
-
-function Nested() {
-  console.log("Nested");
-  return <div>hello</div>;
-}
-
-const stateSubscription = createSubscription(Counter());
-
-export default function AppWrapper() {
-  const counter = useSubscription(stateSubscription);
-
-  return <App counter={counter} />;
 }

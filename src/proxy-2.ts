@@ -70,19 +70,38 @@ function createProxy(
   };
 
   const emitSet = (key: string, value: unknown) => {
-    immutableTarget = isArray ? (target as any).slice() : { ...target };
+    let lastImmutable = immutableTarget;
+
+    if (isArray) {
+      console.log(
+        "Last immutable",
+        JSON.stringify(lastImmutable),
+        lastImmutable
+      );
+    }
+
+    immutableTarget = isArray
+      ? (immutableTarget as any).slice()
+      : { ...immutableTarget };
     immutableTarget[key] = value;
+
+    if (isArray) {
+      console.log("Last immutable", immutableTarget);
+    }
+
     emit();
   };
 
   const emitDelete = (key: string) => {
-    immutableTarget = isArray ? (target as any).slice() : { ...target };
+    immutableTarget = isArray
+      ? (immutableTarget as any).slice()
+      : { ...immutableTarget };
     delete immutableTarget[key];
     emit();
   };
 
   const emitArrayMutation = () => {
-    immutableTarget = (target as any).slice();
+    immutableTarget = (immutableTarget as any).slice();
     emit();
   };
 
@@ -91,13 +110,11 @@ function createProxy(
       subscription();
     });
 
+    console.log("Emit parent", parentKey, immutableTarget);
     emitParent(parentKey, immutableTarget);
   };
 
   const proxy = new Proxy(target, {
-    getOwnPropertyDescriptor: (_, key) => {
-      return Reflect.getOwnPropertyDescriptor(target, key);
-    },
     has: (_, key) => {
       if (key === PROXY_IMMUTABLE_TARGET) {
         return true;
@@ -105,9 +122,9 @@ function createProxy(
 
       return Reflect.has(target, key);
     },
-    ownKeys: () => Reflect.ownKeys(target),
-    get: (_, key) => {
+    get: (target, key) => {
       if (key === PROXY_IMMUTABLE_TARGET) {
+        console.log("looking");
         return immutableTarget;
       }
 
