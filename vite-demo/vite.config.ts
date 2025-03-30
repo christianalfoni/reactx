@@ -8,18 +8,29 @@ const ReactCompilerConfig = {
 };
 
 // https://vite.dev/config/
-export default defineConfig({
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
-  plugins: [
-    react({
-      babel: {
-        plugins: [["babel-plugin-react-compiler", ReactCompilerConfig]],
+export default defineConfig(({ mode }) => {
+  const isProfiling = mode === "profiling";
+
+  return {
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+        ...(isProfiling
+          ? {
+              // Force both imports to use the profiling build.
+              "react-dom/client": "react-dom/profiling",
+            }
+          : {}),
       },
-    }),
-    tailwindcss(),
-  ],
+    },
+    plugins: [
+      react({
+        babel: {
+          plugins: [["babel-plugin-react-compiler", ReactCompilerConfig]],
+          // plugins: [observerPlugin()],
+        },
+      }),
+      tailwindcss(),
+    ],
+  };
 });

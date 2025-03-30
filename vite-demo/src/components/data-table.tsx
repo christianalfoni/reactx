@@ -334,7 +334,6 @@ export function DataTable({
 }: {
   data: z.infer<typeof schema>[];
 }) {
-  "use no memo";
   const [data, setData] = React.useState(() => initialData);
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
@@ -345,7 +344,7 @@ export function DataTable({
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [pagination, setPagination] = React.useState({
     pageIndex: 0,
-    pageSize: 10,
+    pageSize: 100,
   });
   const sortableId = React.useId();
   const sensors = useSensors(
@@ -369,6 +368,7 @@ export function DataTable({
       columnFilters,
       pagination,
     },
+
     getRowId: (row) => row.id.toString(),
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
@@ -383,6 +383,10 @@ export function DataTable({
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
   });
+
+  React.useEffect(() => {
+    setData(initialData);
+  }, [initialData]);
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;

@@ -12,16 +12,20 @@ export type DataItem = {
 };
 
 export function Data() {
-  const data = state<DataItem[]>(jsonData.slice(0, 1));
+  const data = state<DataItem[]>(jsonData.slice(0, 1000));
 
   // Set up interval to update a random item's limit every second
-  setTimeout(() => {
+  const interval = setInterval(() => {
     const randomIndex = Math.floor(Math.random() * data.length);
-
-    console.log("Updating", randomIndex);
 
     const newLimit = Number(data[randomIndex].limit) + 1 + "";
     data[randomIndex].limit = newLimit;
+    data[randomIndex].reviewer = "Eddie" + newLimit;
+  }, 100);
+
+  setTimeout(() => {
+    clearInterval(interval);
+    alert("DONE!");
   }, 1000);
 
   return data;

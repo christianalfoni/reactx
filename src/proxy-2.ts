@@ -159,8 +159,6 @@ function createProxy(
 
       emitSet(key, value);
 
-      console.log("Set", key, value);
-
       return Reflect.set(target, key, value);
     },
     deleteProperty: (target, key) => {
