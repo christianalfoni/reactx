@@ -2,6 +2,7 @@ import path from "path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import observerPlugin from "bonsify/babel-plugin";
 
 const ReactCompilerConfig = {
   target: "19", // '17' | '18' | '19'
@@ -26,8 +27,8 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react({
         babel: {
-          plugins: [["babel-plugin-react-compiler", ReactCompilerConfig]],
-          // plugins: [observerPlugin()],
+          // plugins: [["babel-plugin-react-compiler", ReactCompilerConfig]],
+          plugins: [observerPlugin()],
         },
       }),
       tailwindcss(),

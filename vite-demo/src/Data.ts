@@ -1,4 +1,4 @@
-import { state } from "bonsify";
+import { reactive } from "bonsify";
 import jsonData from "./data.json";
 
 export type DataItem = {
@@ -12,7 +12,7 @@ export type DataItem = {
 };
 
 export function Data() {
-  const data = state<DataItem[]>(jsonData.slice(0, 1000));
+  const data = reactive<DataItem[]>(jsonData.slice(0, 1000));
 
   // Set up interval to update a random item's limit every second
   const interval = setInterval(() => {

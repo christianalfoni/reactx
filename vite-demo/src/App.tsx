@@ -7,10 +7,14 @@ import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Data } from "./Data";
 
-const dataSubscription = createSubscription(Data());
+// const dataSubscription = createSubscription(Data());
+
+const data = Data();
 
 export default function Page() {
-  const data = useSubscription(dataSubscription);
+  // const data = useSubscription(dataSubscription);
+
+  console.log("App");
 
   return (
     <SidebarProvider>
