@@ -84,7 +84,34 @@ If you use a revalidation approach to data fetching the todos array and each tod
 
 Normally this is no concern as reconciliation is fast. But if you are displaying a lot of todos where each todo has a complex UI you risk performance issues.
 
-**Local mutations** strategy is what best optimises references and therefor reconciliation. After that **Automatic sync** where you subscribe to specific changes in the data also best optimises references and therefor reconciliation. We use **Bonsify** for the optimal user experience, which means you should embrace **local mutation** and **subscriptions** to specific changes.
+**Local mutations** strategy is what best optimises references and therefor reconciliation. After that **Automatic sync** where you subscribe to specific changes in the data also best optimises references and therefor reconciliation. We use **Mobx Reactive** for the optimal user experience, which means you should embrace **local mutation** and **subscriptions** on specific changes.
+
+## Optimistic data
+
+If you are able to create ids on the client you can simply add data directly and rather use a notification if anything goes wrong. If you rely on an id being generated on the server it can be a good idea to add specific state for optimistic data. For example:
+
+```ts
+function Todos({ persistence }) {
+  const todos = reactive({
+    todos: [],
+    optimisticTodo: undefined,
+    async addTodo(todo) {
+      try {
+        todos.optimisticTodo = { state: "pending", todo };
+        const newTodo = await persistence.todos.add(todo);
+        todos.optimisticTodo = undefined;
+        todos.todos.push(newTodo);
+      } catch (error) {
+        todos.optimisticTodo = { state: "error", error };
+      }
+    },
+  });
+
+  return reactive.readonly(todos);
+}
+```
+
+Now in your component you can check for `addingTodo` to show the optimistic todo while it is still pending on the server.
 
 ## Extending data
 
@@ -120,3 +147,43 @@ function Data({ persistence }) {
 Now we are hiding data from the components and gain control of how components interact with it.
 
 ## Deriving data
+
+When your data references other data it can be a good idea to rather store your data as a record. By doing this you can more easily do lookups across related data:
+
+```ts
+function Todo({ data, todoDTO }) {
+  const todo = reactive({
+    ...todoDTO,
+    get user() {
+      return data.users[todoDTO.userId];
+    },
+  });
+
+  return reactive.readonly(todo);
+}
+function Data({ persistence }) {
+  const data = reactive({
+    todos: {},
+    users: {},
+  });
+
+  persistence.todos.fetchAll().then(updateTodos);
+  persistence.users.fetchAll().then(updateUsers);
+
+  return reactive.readonly(data);
+
+  function updateTodos(todos) {
+    data.todos = todos.reduce((acc, todoDTO) => {
+      acc[todoDTO.id] = Todo({ data, todoDTO });
+      return acc;
+    }, {});
+  }
+
+  function updateUsers(users) {
+    data.users = users.reduce((acc, userDTO) => {
+      acc[userDTO.id] = userDTO;
+      return acc;
+    }, {});
+  }
+}
+```

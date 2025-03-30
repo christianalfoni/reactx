@@ -45,7 +45,7 @@ Normally a finite state machine is implemented with a dispatcher type of concept
 By simply using a pattern we can resolve this:
 
 ```ts
-import { reactive } from "bonsify";
+import { reactive } from "mobx-reactive";
 
 function Counter() {
   const counter = reactive({

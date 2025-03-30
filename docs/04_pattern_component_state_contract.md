@@ -1,10 +1,8 @@
 # Pattern: Component State Contract
 
-With state management solutions you often consume root state through a context provider and use selectors to narrow down to the specific state you want to consume. Problems arises if you use TypeScript and your state is at some level dynamic. A value can be there or it might not be there.
+Typically global state stores are exposed through a context provider. Problems arises if you use TypeScript and your state is at some level dynamic. A value can be there or it might not be there. For example a component might want access to a user, but the user might be `null`. If the user is passed as a prop, it is guaranteed it will be there.
 
-For example a component might want access to a user, but the user might be `null`. If the user is passed as a prop, it is guaranteed it will be there. But if it is consumed by a selector hook, TypeScript will tell you that the user could be `null`.
-
-That is why you should not consume state globally or using a context provider. Pass it down as a prop.
+That is why you should not consume state globally or use a context provider. Pass it down as a prop.
 
 ```tsx
 import { State } from "./state";

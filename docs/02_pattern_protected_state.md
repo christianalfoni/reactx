@@ -1,9 +1,9 @@
 # Pattern: Protected State
 
-Protecting state prevents components from manipulating state in unpredictable ways. You rather force components to use the functions exposed from the public interface.
+Mobx introduced the `action` to prevent mutations from React. This has caused headaches over the years as `async/await` was introduced to the language, resulting in yet another abstraction of `flow`. With Mobx Reactive you rather expose your state reference as `readonly`. Now the consumer of your state can not make any changes, but everything inside your state scope can.
 
 ```ts
-import { reactive } from "bonsify";
+import { reactive } from "mobx-reactive";
 
 function Counter() {
   const counter = reactive({
@@ -19,12 +19,10 @@ function Counter() {
 }
 ```
 
-Now the `count` can not be changed from components or other parts of the application.
-
 You might be composing state where you can choose to protect or not:
 
 ```ts
-import { reactive } from "bonsify";
+import { reactive } from "mobx-reactive";
 
 function Counter() {
   const counter = reactive({
@@ -52,4 +50,4 @@ function State() {
 }
 ```
 
-In this examople the state exposed to components are all protected regardless, but `State` is still allowed to mutate the `Counter` state.
+In this example the state exposed to components are all protected regardless, but `State` is still allowed to mutate the `Counter` state.
