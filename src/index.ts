@@ -1,13 +1,16 @@
-import { createProxy } from "./proxy";
+import { configure, makeAutoObservable } from "mobx";
+import { createProxy } from "./readonly-proxy";
 
-export { observer, Observer } from "./observer";
+configure({
+  enforceActions: "never",
+});
 
 export function reactive<T extends Record<string, any>>(value: T): T {
-  return createProxy(value);
+  return makeAutoObservable(value);
 }
 
 function readonly<T extends Record<string, any>>(value: T): T {
-  return createProxy(value, true);
+  return createProxy(value);
 }
 
 reactive.readonly = readonly;
