@@ -1,6 +1,6 @@
 # Mobx Reactive
 
-> Single reactive primitive for performant state management in React
+> Single reactive primitive for complex and performant state management in React
 
 ## Get Started
 
@@ -17,7 +17,7 @@ import swcPlugin from "mobx-reactive/swc-plugin";
 
 ## Why Mobx Reactive?
 
-Mobx at its core is a performant and flexible reactive system. It was originaly introduced for classes, but as React has evolved it is time to rethink how **simple** Mobx can be. With a single `reactive` primitive, transparent observation in components and functional patterns for state management it has never been simpler to wield complex and performant state management in React applications.
+Mobx at its core is a performant and flexible reactive system. It was originaly introduced for classes, but as React has evolved it is time to rethink how **simple** Mobx can be. With a single `reactive` primitive, transparent observation in components and functional patterns for state management it has never been simpler to handle complex and performant state management in React applications.
 
 ```tsx
 import { reactive } from "mobx-reactive";
@@ -34,7 +34,9 @@ function Counter() {
 }
 ```
 
-Explore the patterns that will help you build performant and complex state management in React applications.
+**Mobx** is a tool that derives from building large complex single page applications that needs to be highly optimized for "app like" experience in interactions, application level state management and data fetching, mostly treating components as a "dumb" view.
+
+Explore the **patterns** that will help you build performant and complex state management in React applications.
 
 - [Constructor](./docs/01_pattern_constructor.md)
 - [Protected State](./docs/02_pattern_protected_state.md)
