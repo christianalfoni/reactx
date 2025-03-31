@@ -17,24 +17,14 @@ import swcPlugin from "mobx-reactive/swc-plugin";
 
 ## Why Mobx Reactive?
 
-Mobx at its core is a performant and flexible reactive system. It was originaly introduced for classes, but as React has evolved it is time to rethink how **simple** Mobx can be. With a single `reactive` primitive, transparent observation in components and functional patterns for state management it has never been simpler to handle complex and performant state management in React applications.
+Mobx at its core is a performant and flexible reactive system. It was originaly introduced for classes, but as React has evolved it is time to rethink how **simple** Mobx can be. With a single `reactive` primitive, transparent observation in components and functional patterns for state management it has never been simpler to embrace external state management in React.
 
-```tsx
-import { reactive } from "mobx-reactive";
+When we state **external state management** it means that you treat React as a pure view layer. That means your state management IS the application and React just derives the current state of your application to produce an interface. This is a different perspective of building apps which has the following benefits:
 
-const counter = reactive({
-  count: 0,
-  increase() {
-    counter.count++;
-  },
-});
-
-function Counter() {
-  return <button onClick={counter.increase}>Count is: {counter.count}</button>;
-}
-```
-
-**Mobx** is a tool that derives from building large complex single page applications that needs to be highly optimized for "app like" experience in interactions, application level state management and data fetching, mostly treating components as a "dumb" view.
+- Work with state management complexity outside the reconciler
+- Work with mutable state using plain JavaScript
+- A component tree with mostly local React state, making it more flexible to change
+- Derive the state to other targets than the web, or other devices
 
 Explore the **patterns** that will help you build performant and complex state management in React applications.
 
