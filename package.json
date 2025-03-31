@@ -1,6 +1,6 @@
 {
   "name": "mobx-reactive",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "description": "Single reactive primitive for complex and performant state management in React",
   "keywords": [
     "state",
