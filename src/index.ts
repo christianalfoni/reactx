@@ -1,6 +1,6 @@
 import { configure, makeAutoObservable } from "mobx";
 import { createProxy } from "./readonly-proxy";
-import { useRef } from "react";
+import { use } from "react";
 
 configure({
   enforceActions: "never",
@@ -14,14 +14,9 @@ function readonly<T extends Record<string, any>>(value: T): T {
   return createProxy(value);
 }
 
-reactive.readonly = readonly;
-
-export function useReactive<T extends Record<string, any>>(cb: () => T): T {
-  const reactiveRef = useRef<T>(null);
-
-  if (!reactiveRef.current) {
-    reactiveRef.current = reactive(cb());
-  }
-
-  return reactive.readonly(reactiveRef.current);
+function read<T>(value: Promise<T> | T): T {
+  return value instanceof Promise ? use(value) : value;
 }
+
+reactive.readonly = readonly;
+reactive.read = read;

@@ -1,9 +1,5 @@
 # Pattern: Component State Contract
 
-Typically global state stores are exposed through a context provider. Problems arises if you use TypeScript and your state is at some level dynamic. A value can be there or it might not be there. For example a component might want access to a user, but the user might be `null`. If the user is passed as a prop, it is guaranteed it will be there.
-
-That is why you should not consume state globally or use a context provider. Pass it down as a prop.
-
 ```tsx
 import { State } from "./state";
 
@@ -12,11 +8,11 @@ const state = State();
 render(<App state={state} />);
 ```
 
-As your components narrows down on specific state, also pass the related narrowed state down as a prop.
+Typically global state stores are exposed through a context provider. Problems arises if you use TypeScript and your state is at some level dynamic. A value can be there or it might not be there. For example a component might want access to a user, but the user might be `null`. If the user is passed as a prop, it is guaranteed it will be there. As your components only needs branches of your state, pass the branches down as props.
 
 ## Traversing up
 
-If a component has been passed a nested state as a prop, it is useful for that component to still be able to access parent state. This can be solved when you construct your state interface.
+If a component has been passed a branch of state as a prop, it is useful for that component to still be able to access parent state. This can be solved when you construct your state interface.
 
 ```ts
 import { reactive } from "bonsify";
@@ -28,7 +24,7 @@ function Counter({ root }) {
     increase,
   });
 
-  return reactive.readonly(counter);
+  return counter;
 
   function incerase() {
     counter.count++;

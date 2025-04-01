@@ -17,14 +17,16 @@ import swcPlugin from "mobx-reactive/swc-plugin";
 
 ## Why Mobx Reactive?
 
-Mobx at its core is a performant and flexible reactive system. It was originaly introduced for classes, but as React has evolved it is time to rethink how **simple** Mobx can be. With a single `reactive` primitive, transparent observation in components and functional patterns for state management it has never been simpler to embrace external state management in React.
+Mobx at its core is a performant and flexible reactive system. It was originaly introduced for classes, but as React has evolved it is time to rethink how **simple** Mobx can be. With a single `reactive` primitive, transparent observation in components and functional patterns for state management it has never been simpler to embrace external state management with benefits such as:
 
-When we state **external state management** it means that you treat React as a pure view layer. That means your state management IS the application and React just derives the current state of your application to produce an interface. This is a different perspective of building apps which has the following benefits:
+- 🕸 Handle state management complexity without the overhead of the reconciler
+- 🍎 Use plain JavaScript to mutate state
+- 🌲 Gain flexibility in adjusting your UI as components or mostly local state, if any
+- 📺 Derive the state to different targets like web, reactive native or just a mobile web version
 
-- Work with state management complexity outside the reconciler
-- Work with mutable state using plain JavaScript
-- A component tree with mostly local React state, making it more flexible to change
-- Derive the state to other targets than the web, or other devices
+## Mental Model
+
+With **Mobx Reactive** think about the state management as the application itself. React just derives a view from that state. The goal is to make your components as minimal and simple as possible. There is enough complexity in components with elements, styling and dynamic content. Use **Mobx Reactive** to handle the complexity of state management.
 
 Explore the **patterns** that will help you build performant and complex state management in React applications.
 
