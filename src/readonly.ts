@@ -128,3 +128,7 @@ export function createProxy<T>(target: T): T {
 
   return proxy;
 }
+
+export function readonly<T extends Record<string, any>>(value: T): T {
+  return createProxy(value);
+}

@@ -5,7 +5,10 @@ React has a suspense feature. You can take advantage of this with `reactive.prom
 ```ts
 function State({ persistence }) {
   const state = reactive({
-    todos: persistence.todos.fetch(),
+    todos: persistence.todos.fetch() as Promise<Todo[]> | Todo[],
+    addTodo() {
+      const todos = await state.todos;
+    },
   });
 
   persistence.todos.subscribe((todos) => {
@@ -20,7 +23,7 @@ In the component you can now:
 
 ```tsx
 function Todos({ state }) {
-  const todos = use(state.todos);
+  const todos = state.todos instanceof Promise ? use(state.todos) : state.todos;
 
   return <div></div>;
 }
@@ -32,12 +35,12 @@ This can also be useful when you dynamically want to fetch state based on what y
 function State({ persistence }) {
   const todosDetails = reactive({});
   const state = reactive({
-    todos: reactive.promise(persistence.todos.fetch()),
+    todos: persistence.todos.fetch(),
     readTodoDetails,
   });
 
   persistence.todos.subscribe((todos) => {
-    state.todos = reactive.promise(todos);
+    state.todos = todos;
   });
 
   return state;
@@ -46,12 +49,24 @@ function State({ persistence }) {
     let todoDetails = todosDetails[id];
 
     if (!todoDetails) {
-      todosDetails[id] = todoDetails = reactive.promise(
-        persistence.todos.fetch(id)
-      );
+      todosDetails[id] = todoDetails = fetchTodoDetails(id);
     }
 
     return todoDetails;
+  }
+
+  function fetchTodoDetails(id) {
+    fetchTodo()
+      .then((value) => {
+        todosDetails[id] = { status: "fulfilled", value };
+      })
+      .catch((error) => {
+        todosDetails[id] = { status: "error", error };
+      });
+
+    return {
+      status: "pending",
+    };
   }
 }
 ```
@@ -59,10 +74,24 @@ function State({ persistence }) {
 And in the component:
 
 ```tsx
-function Todo({ id, state }) {
-  const todo = use(state.readTodoDetails(id));
+function Details({ id, state }) {
+  const details = useSuspenseQuery(() => state.readTodoDetails(id));
 
-  return <div></div>;
+  useEffect(details.subscribe, []);
+}
+
+function Todo({ id, state }) {
+  const router = useRouter();
+
+  return (
+    <div>
+      {router.query.details ? (
+        <Suspense>
+          <Details id={id} state={state} />
+        </Suspense>
+      ) : null}
+    </div>
+  );
 }
 ```
 
