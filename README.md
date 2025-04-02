@@ -17,7 +17,7 @@ import swcPlugin from "mobx-reactive/swc-plugin";
 
 ## Why Mobx Reactive?
 
-Mobx at its core is a performant and flexible reactive system. It was originaly introduced for classes, but as React has evolved it is time to rethink how **simple** Mobx can be. With a single `reactive` primitive, transparent observation in components and functional patterns for state management it has never been simpler to embrace external state management with benefits such as:
+Mobx at its core is a performant and flexible reactive system. It was originaly introduced for classes, but as React has evolved it is time to rethink how **simple** and **compatible** Mobx can be. With a single `reactive` primitive, transparent observation in components and functional patterns for state management it has never been simpler to embrace external state management with benefits such as:
 
 - 🕸 Handle state management complexity without the overhead of the reconciler
 - 🍎 Use plain JavaScript to mutate state
@@ -26,7 +26,19 @@ Mobx at its core is a performant and flexible reactive system. It was originaly 
 
 ## Mental Model
 
-With **Mobx Reactive** think about the state management as the application itself. React just derives a view from that state. The goal is to make your components as minimal and simple as possible. There is enough complexity in components with elements, styling and dynamic content. Use **Mobx Reactive** to handle the complexity of state management.
+When doing state mangement in React you have a mental model of:
+
+- **Local by default**: All state management is defined within components, you have to explicitly share that state management using props or context
+- **Immutability**: To make changes to state you need to ensure changes to object and array references using an update function
+- **Waterfall reconciliation**: When you make changes to state it needs to flow down to the components that use that state
+- **Server driven**: With server components you are encouraged to only define and fetch the exact state and data that is needed for the endpoint the user is initially hitting
+
+When doing state management externally with Mobx Reactive you have a different mental model:
+
+- **Shared by default**: All components can access all the state
+- **Mutable**: Use plain JavaScript to change state
+- **Observation**: Components knows exactly what state they use and will reconcile when that state changes
+- **Client driven**: You load up your whole app regardless of what url the user hits and
 
 Explore the **patterns** that will help you build performant and complex state management in React applications.
 
