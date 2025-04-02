@@ -1,17 +1,23 @@
 import { transaction } from "mobx";
 import { reactive } from ".";
 
-type InternalState<T> =
-  | {
-      status: "IDLE";
-    }
-  | {
-      status: "ACTIVE";
-      abortController: AbortController;
-      promise: Promise<T>;
-    };
+type IdleInternalState = {
+  current: "IDLE";
+};
 
-type Status<T> =
+type ActiveInternalState<T> = {
+  current: "ACTIVE";
+  abortController: AbortController;
+  promise: Promise<T>;
+  status: Status<T>;
+};
+
+type InternalState<T> = ActiveInternalState<T> | IdleInternalState;
+
+type Status<T> = {
+  promise: Promise<T>;
+  isRevalidating: boolean;
+} & (
   | {
       status: "PENDING";
     }
@@ -22,49 +28,46 @@ type Status<T> =
   | {
       status: "REJECTED";
       error: Error;
-    };
+    }
+);
 
 type Query<T> = {
-  fetch: () => Query<T>;
-  promise: () => Promise<T>;
-  revalidate: () => Query<T>;
-  isRevalidating: boolean;
-} & Status<T>;
+  read: () => Status<T>;
+  revalidate: () => Status<T>;
+};
 
 export function query<T>(fetcher: () => Promise<T>) {
   let internalState: InternalState<T> = {
-    status: "IDLE",
+    current: "IDLE",
   };
 
-  const state = reactive<Query<T>>({
-    status: "PENDING",
-    fetch,
+  const queryState = reactive<Query<T>>({
+    read,
     revalidate,
-    promise,
-    isRevalidating: true,
   });
 
-  return state;
+  return queryState;
 
-  function updateState(update: Partial<Query<T>>): Query<T> {
+  function updateStatus(prev: Status<T>, update: Status<T>): Status<T> {
     // Just for typing
-    const anyState: any = state;
+    const anyPrev: any = prev;
 
     transaction(() => {
-      delete anyState.error;
-      delete anyState.value;
-      Object.assign(anyState, update);
+      delete anyPrev.error;
+      delete anyPrev.value;
+      Object.assign(anyPrev, update);
     });
 
-    return anyState;
+    return anyPrev;
   }
 
-  function run(): InternalState<T> {
-    if (internalState.status === "ACTIVE") {
+  function fetch(): ActiveInternalState<T> {
+    if (internalState.current === "ACTIVE") {
       internalState.abortController.abort();
     }
 
     const abortController = new AbortController();
+
     const promise = fetcher()
       .then((value) => {
         if (abortController.signal.aborted) {
@@ -72,7 +75,12 @@ export function query<T>(fetcher: () => Promise<T>) {
           return value;
         }
 
-        updateState({ status: "RESOLVED", value });
+        updateStatus(newInternalState.status, {
+          status: "RESOLVED",
+          value,
+          promise,
+          isRevalidating: false,
+        });
 
         return value;
       })
@@ -81,7 +89,12 @@ export function query<T>(fetcher: () => Promise<T>) {
           throw error;
         }
 
-        updateState({ status: "REJECTED", error });
+        updateStatus(newInternalState.status, {
+          status: "REJECTED",
+          error,
+          promise,
+          isRevalidating: false,
+        });
 
         throw error;
       });
@@ -90,39 +103,53 @@ export function query<T>(fetcher: () => Promise<T>) {
       // Just to ensure browser does not throw unhandled promise rejection
     });
 
-    return {
-      status: "ACTIVE",
+    const newInternalState: ActiveInternalState<T> = {
+      current: "ACTIVE",
       abortController,
       promise,
+      status:
+        internalState.current === "IDLE"
+          ? reactive<Status<T>>({
+              status: "PENDING",
+              promise,
+              isRevalidating: true,
+            })
+          : updateStatus(
+              internalState.status,
+              internalState.status.status === "REJECTED"
+                ? {
+                    status: "PENDING",
+                    isRevalidating: true,
+                    promise,
+                  }
+                : {
+                    ...internalState.status,
+                    promise,
+                    isRevalidating: true,
+                  }
+            ),
     };
+
+    return newInternalState;
   }
 
-  function fetch(): Query<T> {
-    if (internalState.status === "ACTIVE") {
-      return state;
+  function read(): Status<T> {
+    if (internalState.current === "ACTIVE") {
+      return internalState.status;
     }
 
-    internalState = run();
+    internalState = fetch();
 
-    // Will always be "PENDING"
-    return state;
+    return internalState.status;
   }
 
-  function revalidate(): Query<T> {
-    if (internalState.status === "IDLE") {
-      return fetch();
+  function revalidate(): Status<T> {
+    if (internalState.current === "IDLE") {
+      return read();
     }
 
-    internalState = run();
+    internalState = fetch();
 
-    return updateState({ status: state.status, isRevalidating: true });
-  }
-
-  function promise() {
-    if (internalState.status === "IDLE") {
-      return fetch().promise();
-    }
-
-    return internalState.promise;
+    return internalState.status;
   }
 }
