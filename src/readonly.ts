@@ -106,7 +106,11 @@ function createObjectProxy(target: object) {
 
 export function createProxy<T>(target: T): T {
   // Type guard for non-objects
-  if (target === null || typeof target !== "object") {
+  if (
+    target === null ||
+    typeof target !== "object" ||
+    target instanceof Promise
+  ) {
     return target;
   }
 

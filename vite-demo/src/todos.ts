@@ -9,7 +9,7 @@ export function Todos() {
     remove,
   });
 
-  return todos;
+  return reactive.readonly(todos);
 
   async function add({ title }: { title: string }) {
     nextTodosData.unshift(title);

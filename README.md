@@ -31,14 +31,14 @@ When doing state mangement in React you have a mental model of:
 - **Local by default**: All state management is defined within components, you have to explicitly share that state management using props or context
 - **Immutability**: To make changes to state you need to ensure changes to object and array references using an update function
 - **Waterfall reconciliation**: When you make changes to state it needs to flow down to the components that use that state
-- **Server driven**: With server components you are encouraged to only define and fetch the exact state and data that is needed for the endpoint the user is initially hitting
+- **Fused state with UI**: With server components you are encouraged to only define and fetch the exact state and data that is needed for the endpoint the user is initially hitting
 
 When doing state management externally with Mobx Reactive you have a different mental model:
 
 - **Shared by default**: All components can access all the state
 - **Mutable**: Use plain JavaScript to change state
 - **Observation**: Components knows exactly what state they use and will reconcile when that state changes
-- **Client driven**: You load up your whole app regardless of what url the user hits and
+- **Separate state from UI**: You load up your whole app regardless of what url the user hits and
 
 Explore the **patterns** that will help you build performant and complex state management in React applications.
 
