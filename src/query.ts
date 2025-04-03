@@ -1,18 +1,13 @@
-import { transaction } from "mobx";
 import { reactive } from ".";
 
 type IdleInternalState<T> = {
   current: "IDLE";
-  promise: Promise<T>;
-  resolve: (value: T) => void;
-  reject: (error: Error) => void;
 };
 
 type ActiveInternalState<T> = {
   current: "ACTIVE";
   abortController: AbortController;
-  promise: Promise<T>;
-  status: State<T>;
+  promise: SuspensePromise<T>;
 };
 
 type InternalState<T> = ActiveInternalState<T> | IdleInternalState<T>;
@@ -35,147 +30,198 @@ type State<T> = {
 
 type Query<T> = {
   state: State<T>;
-  promise: Promise<T>;
+  promise: SuspensePromise<T>;
   revalidate: () => Promise<T>;
   fetch: () => Promise<T>;
 };
 
 export function query<T>(fetcher: () => Promise<T>) {
-  const idlePromise = createBlockingPromise<T>();
-
-  let internalState: InternalState<T> = {
-    current: "IDLE",
-    promise: idlePromise.promise,
-    resolve: idlePromise.resolve,
-    reject: idlePromise.reject,
-  };
-
-  const state = reactive<State<T>>({
-    isRevalidating: false,
-    status: "PENDING",
+  const state = reactive<{ query: State<T>; internal: InternalState<T> }>({
+    query: {
+      isRevalidating: false,
+      status: "PENDING",
+    },
+    internal: {
+      current: "IDLE",
+    },
   });
 
   const queryState = reactive<Query<T>>({
-    state,
+    get state() {
+      if (state.internal.current === "IDLE") {
+        fetch();
+      }
+
+      return state.query;
+    },
+    set state(newState) {
+      state.query = newState;
+    },
     get promise() {
-      return internalState.promise;
+      if (state.internal.current === "IDLE") {
+        // This changes internal state to "ACTIVE"
+        fetch();
+      }
+
+      return (state.internal as ActiveInternalState<T>).promise;
+    },
+    set promise(newPromise) {
+      (state.internal as ActiveInternalState<T>).promise = newPromise;
     },
     revalidate,
-    fetch: executeQuery,
+    fetch,
   });
 
   return queryState;
 
-  function updateStatus(prev: State<T>, next: State<T>): State<T> {
-    transaction(() => {
-      // @ts-expect-error
-      delete prev.error;
-      // @ts-expect-error
-      delete prev.value;
-      Object.assign(prev, next);
-    });
-
-    return prev;
-  }
-
   function executeQuery(): ActiveInternalState<T> {
-    if (internalState.current === "ACTIVE") {
-      internalState.abortController.abort();
+    if (state.internal.current === "ACTIVE") {
+      state.internal.abortController.abort();
     }
 
     const abortController = new AbortController();
 
-    const promise = fetcher()
-      .then((value) => {
-        if (abortController.signal.aborted) {
-          // We return the stale value
-          return value;
+    state.query.isRevalidating = true;
+
+    const observablePromise = createObservablePromise<T>(
+      fetcher(),
+      abortController,
+      (promise) => {
+        newInternalState.promise = promise;
+        queryState.promise = promise;
+
+        if (promise.status === "fulfilled") {
+          queryState.state = {
+            status: "RESOLVED",
+            value: promise.value,
+            isRevalidating: false,
+          };
+        } else {
+          queryState.state = {
+            status: "REJECTED",
+            error: promise.reason,
+            isRevalidating: false,
+          };
         }
-
-        updateStatus(newInternalState.status, {
-          status: "RESOLVED",
-          value,
-          promise,
-          isRevalidating: false,
-        });
-
-        return value;
-      })
-      .catch((error) => {
-        if (abortController.signal.aborted) {
-          throw error;
-        }
-
-        updateStatus(newInternalState.status, {
-          status: "REJECTED",
-          error,
-          promise,
-          isRevalidating: false,
-        });
-
-        throw error;
-      });
-
-    promise.catch(() => {
-      // Just to ensure browser does not throw unhandled promise rejection
-    });
+      }
+    );
 
     const newInternalState: ActiveInternalState<T> = {
       current: "ACTIVE",
       abortController,
-      promise,
-      status:
-        internalState.current === "IDLE"
-          ? reactive<State<T>>({
-              status: "PENDING",
-              promise,
-              isRevalidating: true,
-            })
-          : updateStatus(
-              internalState.status,
-              internalState.status.status === "REJECTED"
-                ? {
-                    status: "PENDING",
-                    isRevalidating: true,
-                    promise,
-                  }
-                : {
-                    ...internalState.status,
-                    promise,
-                    isRevalidating: true,
-                  }
-            ),
+      promise: observablePromise,
     };
 
     return newInternalState;
   }
 
   function fetch(): Promise<T> {
-    internalState = executeQuery();
+    state.internal = executeQuery();
 
-    return internalState.promise;
+    queryState.state = {
+      status: "PENDING",
+      isRevalidating: true,
+    };
+    queryState.promise = state.internal.promise;
+
+    return state.internal.promise;
   }
 
   function revalidate(): Promise<T> {
-    if (internalState.current === "IDLE") {
+    if (state.internal.current === "IDLE") {
       return fetch();
     }
 
-    internalState = executeQuery();
-
-    return internalState.promise;
+    return executeQuery().promise;
   }
 }
 
-function createBlockingPromise<T>() {
-  let resolve: (value: T) => void;
-  let reject: (error: Error) => void;
+type PendingPromise<T> = Promise<T> & {
+  status: "pending";
+};
 
-  const promise = new Promise<T>((r, r2) => {
-    resolve = r;
-    reject = r2;
+type FulfilledPromise<T> = Promise<T> & {
+  status: "fulfilled";
+  value: T;
+};
+
+type RejectedPromise<T> = Promise<T> & {
+  status: "rejected";
+  reason: Error;
+};
+
+export type SuspensePromise<T> =
+  | PendingPromise<T>
+  | FulfilledPromise<T>
+  | RejectedPromise<T>;
+
+export function createPendingPromise<T>(
+  promise: Promise<T>
+): PendingPromise<T> {
+  return Object.assign(promise, {
+    status: "pending" as const,
+  });
+}
+
+export function createFulfilledPromise<T>(
+  promise: Promise<T>,
+  value: T
+): FulfilledPromise<T> {
+  return Object.assign(promise, {
+    status: "fulfilled" as const,
+    value,
+  });
+}
+
+export function createRejectedPromise<T>(
+  promise: Promise<T>,
+  reason: Error
+): RejectedPromise<T> {
+  return Object.assign(promise, {
+    status: "rejected" as const,
+    reason,
+  });
+}
+
+// This is responsible for creating the observable promise by
+// handling the resolved and rejected state of the initial promise and
+// notifying
+export function createObservablePromise<T>(
+  promise: Promise<any>,
+  abortController: AbortController,
+  onSettled: (promise: FulfilledPromise<T> | RejectedPromise<T>) => void
+): SuspensePromise<T> {
+  const observablePromise = createPendingPromise(
+    promise
+      .then(function (resolvedValue) {
+        if (abortController.signal.aborted) {
+          return;
+        }
+
+        onSettled(
+          createFulfilledPromise(Promise.resolve(resolvedValue), resolvedValue)
+        );
+
+        return resolvedValue;
+      })
+      .catch((rejectedReason) => {
+        if (abortController.signal.aborted) {
+          return;
+        }
+
+        const rejectedPromise = Promise.reject(rejectedReason);
+
+        onSettled(createRejectedPromise(rejectedPromise, rejectedReason));
+
+        return rejectedPromise;
+      })
+  );
+
+  observablePromise.catch(() => {
+    // When consuming a promise form a signal we do not consider it an unhandled promise anymore.
+    // This catch prevents the browser from identifying it as unhandled, but will still be a rejected
+    // promise if you try to consume it
   });
 
-  // @ts-expect-error
-  return { promise, resolve, reject };
+  return observablePromise;
 }
