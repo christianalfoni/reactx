@@ -8,4 +8,4 @@ When you start introducing state in React, that state is defined with the elemen
 
 ![](./ui-state.png){width=250px}
 
-As your application grows though, the state and the UI represented in your component tree starts to diverge.
+As your application grows your state will start diverge from the UI. That means slowly a tree of state will emerge from the components and a separate tree of UI.
