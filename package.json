@@ -45,7 +45,10 @@
     "build:esm": "tsc -p ./tsconfig.build-esm.json",
     "clean": "rimraf ./dist ./dist-babel-plugin ./dist-swc-plugin",
     "test": "vitest",
-    "prepublish": "yarn build"
+    "prepublish": "yarn build",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {
     "@types/babel__core": "^7.20.5",
@@ -54,6 +57,7 @@
     "rimraf": "^6.0.1",
     "typescript": "^5.7.3",
     "vite": "^6.1.0",
+    "vitepress": "^1.6.3",
     "vitest": "^3.0.5"
   },
   "dependencies": {
