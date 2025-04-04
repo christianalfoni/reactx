@@ -1,6 +1,6 @@
 import { reactive } from ".";
 
-type IdleInternalState<T> = {
+type IdleInternalState = {
   current: "IDLE";
 };
 
@@ -10,9 +10,13 @@ type ActiveInternalState<T> = {
   promise: SuspensePromise<T>;
 };
 
-type InternalState<T> = ActiveInternalState<T> | IdleInternalState<T>;
+type InternalState<T> = ActiveInternalState<T> | IdleInternalState;
 
-type State<T> = {
+function unwrapGetter(value: unknown) {
+  return typeof value === "function" ? value() : value;
+}
+
+export type QueryState<T> = {
   isRevalidating: boolean;
 } & (
   | {
@@ -29,14 +33,22 @@ type State<T> = {
 );
 
 type Query<T> = {
-  state: State<T>;
+  state: QueryState<T>;
   promise: SuspensePromise<T>;
   revalidate: () => Promise<T>;
   fetch: () => Promise<T>;
 };
 
-export function query<T>(fetcher: () => Promise<T>) {
-  const state = reactive<{ query: State<T>; internal: InternalState<T> }>({
+export function query<T>(fetcher: () => Promise<T>): Query<T>;
+export function query<T, O>(
+  fetcher: () => Promise<T>,
+  setter: (data: T) => () => O
+): Query<O>;
+export function query<T, O>(
+  fetcher: () => Promise<T>,
+  setter?: (data: T) => () => O
+): Query<T> | Query<O> {
+  const state = reactive<{ query: QueryState<T>; internal: InternalState<T> }>({
     query: {
       isRevalidating: false,
       status: "PENDING",
@@ -58,18 +70,34 @@ export function query<T>(fetcher: () => Promise<T>) {
       state.query = newState;
     },
     get promise() {
-      if (state.internal.current === "IDLE") {
-        // This changes internal state to "ACTIVE"
-        fetch();
+      const internalState =
+        state.internal.current === "IDLE" ? fetch() : state.internal;
+
+      if (!setter) {
+        return internalState.promise;
       }
 
-      return (state.internal as ActiveInternalState<T>).promise;
+      switch (internalState.promise.status) {
+        case "fulfilled":
+          return createFulfilledPromise(
+            internalState.promise.then(unwrapGetter),
+            unwrapGetter(internalState.promise.value)
+          );
+        case "pending": {
+          return createPendingPromise(internalState.promise.then(unwrapGetter));
+        }
+        case "rejected": {
+          return internalState.promise;
+        }
+      }
     },
     set promise(newPromise) {
       (state.internal as ActiveInternalState<T>).promise = newPromise;
     },
     revalidate,
-    fetch,
+    fetch() {
+      return fetch().promise;
+    },
   });
 
   return queryState;
@@ -84,16 +112,19 @@ export function query<T>(fetcher: () => Promise<T>) {
     state.query.isRevalidating = true;
 
     const observablePromise = createObservablePromise<T>(
-      fetcher(),
+      fetcher().then((data) => (setter ? setter(data) : data)),
       abortController,
       (promise) => {
         newInternalState.promise = promise;
         queryState.promise = promise;
 
         if (promise.status === "fulfilled") {
+          const value = promise.value;
           queryState.state = {
             status: "RESOLVED",
-            value: promise.value,
+            get value() {
+              return unwrapGetter(value);
+            },
             isRevalidating: false,
           };
         } else {
@@ -115,21 +146,20 @@ export function query<T>(fetcher: () => Promise<T>) {
     return newInternalState;
   }
 
-  function fetch(): Promise<T> {
-    state.internal = executeQuery();
+  function fetch(): ActiveInternalState<T> {
+    const activeInternalState = (state.internal = executeQuery());
 
     queryState.state = {
       status: "PENDING",
       isRevalidating: true,
     };
-    queryState.promise = state.internal.promise;
 
-    return state.internal.promise;
+    return activeInternalState;
   }
 
   function revalidate(): Promise<T> {
     if (state.internal.current === "IDLE") {
-      return fetch();
+      return fetch().promise;
     }
 
     return executeQuery().promise;
@@ -169,7 +199,9 @@ export function createFulfilledPromise<T>(
 ): FulfilledPromise<T> {
   return Object.assign(promise, {
     status: "fulfilled" as const,
-    value,
+    get value() {
+      return unwrapGetter(value);
+    },
   });
 }
 

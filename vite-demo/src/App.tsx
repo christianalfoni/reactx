@@ -34,7 +34,9 @@ function App() {
           <li>Adding {addMutationState.params.title}...</li>
         )}
         {list.map((todo) => (
-          <li key={todo}>{todo}</li>
+          <li key={todo} onClick={() => todos.remove(todo)}>
+            {todo}
+          </li>
         ))}
       </ul>
     </div>

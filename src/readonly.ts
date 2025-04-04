@@ -109,7 +109,7 @@ export function createProxy<T>(target: T): T {
   if (
     target === null ||
     typeof target !== "object" ||
-    target instanceof Promise
+    Object.prototype.toString.call(target) !== "[object Object]"
   ) {
     return target;
   }

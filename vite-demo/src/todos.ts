@@ -1,6 +1,6 @@
 import { reactive } from "mobx-reactive";
 
-const nextTodosData = ["Learn React", "Learn MobX", "Learn Vite"];
+let nextTodosData = ["Learn React", "Learn MobX", "Learn Vite"];
 
 export function Todos() {
   const todos = reactive({
@@ -19,8 +19,10 @@ export function Todos() {
     return title;
   }
 
-  function remove(todo: string) {
-    // todos.list = todos.list.filter((t) => t !== todo);
+  async function remove(todo: string) {
+    nextTodosData = nextTodosData.filter((t) => t !== todo);
+
+    await todos.query.revalidate();
   }
 
   function fetchTodos() {
