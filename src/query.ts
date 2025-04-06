@@ -27,7 +27,7 @@ function unwrapGetter(value: unknown) {
 type BaseQuery<T> = {
   revalidate: () => Promise<T>;
   fetch: () => Promise<T>;
-  subscribe: (subscription: () => void) => () => void;
+  subscribe: () => () => void;
 };
 
 export type QueryState<T> =
@@ -71,7 +71,7 @@ export function query<T, O>(
   fetcher: () => Promise<T>,
   setter?: (data: T) => () => O
 ): Query<T> | Query<O> {
-  const subscriptions = new Set<() => void>();
+  let subscriptionCount = 0;
   let internalState: InternalState = { current: "IDLE" };
   const state = reactive<QueryState<T>>({
     error: null,
@@ -141,19 +141,19 @@ export function query<T, O>(
 
   return queryState as Query<T>;
 
-  function subscribe(subscription: () => void) {
+  function subscribe() {
     if (internalState.current === "IDLE") {
       throw new Error("You can not subscribe to a state is not active");
     }
 
     internalState.current = "ACTIVE";
 
-    subscriptions.add(subscription);
+    subscriptionCount++;
 
     return () => {
-      subscriptions.delete(subscription);
+      subscriptionCount--;
 
-      if (subscriptions.size === 0) {
+      if (subscriptionCount === 0) {
         internalState.current = "EXPIRED";
       }
     };

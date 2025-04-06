@@ -1,22 +1,31 @@
 import "./App.css";
 
-import { Suspense, use, useState } from "react";
+import { Suspense, use, useEffect, useState } from "react";
 import { Todos } from "./todos";
 
 const todos = Todos();
 
 function App() {
   const [newTodo, setNewTodo] = useState("");
-  const list = use(todos.query.promise);
-  const addMutationState = todos.add.state;
+  const { error, isFetching, value, revalidate, fetch, subscribe } =
+    todos.query;
+  const { mutate: addTodo, pendingParams: pendingTodo } = todos.add;
 
-  console.log(JSON.stringify(addMutationState));
+  useEffect(subscribe, [subscribe]);
+
+  if (error) {
+    return <div>Error: {error.message}</div>;
+  }
+
+  if (isFetching) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div>
       <h1>Todos</h1>
-      <button onClick={todos.query.revalidate}>Revalidate</button>
-      <button onClick={todos.query.fetch}>Refetch</button>
+      <button onClick={revalidate}>Revalidate</button>
+      <button onClick={fetch}>Refetch</button>
       <input
         type="text"
         placeholder="Add todo"
@@ -24,16 +33,14 @@ function App() {
         onChange={(event) => setNewTodo(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === "Enter") {
-            todos.add.mutate({ title: newTodo });
+            addTodo({ title: newTodo });
             setNewTodo("");
           }
         }}
       />
       <ul>
-        {addMutationState.status === "PENDING" && (
-          <li>Adding {addMutationState.params.title}...</li>
-        )}
-        {list.map((todo) => (
+        {pendingTodo && <li>Adding {pendingTodo.title}...</li>}
+        {value.map((todo) => (
           <li key={todo} onClick={() => todos.remove(todo)}>
             {todo}
           </li>
@@ -44,9 +51,16 @@ function App() {
 }
 
 export default function AppWrapper() {
+  const [active, setActive] = useState(true);
+
+  function toggle() {
+    setActive(!active);
+  }
+
   return (
     <Suspense fallback={<div>Suspense Loading...</div>}>
-      <App />
+      <button onClick={toggle}>Toggle</button>
+      {active ? <App /> : null}
     </Suspense>
   );
 }
