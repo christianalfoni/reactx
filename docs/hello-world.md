@@ -1,9 +1,9 @@
 # Hello World
 
-_CounterState.ts_
+::: code-group
 
-```ts
-import { reactive } from "mobx-reactive";
+```tsx [Functional]
+import { reactive } from "mobx-lite";
 
 export type CounterState = ReturnType<typeof CounterState>;
 
@@ -13,17 +13,13 @@ function CounterState() {
     increase,
   });
 
-  return reactive.readonly(counter);
+  return counter;
 
   function increase() {
     counter.count++;
   }
 }
-```
 
-_Counter.tsx_
-
-```tsx
 const counter = CounterState();
 
 function Counter() {
@@ -35,3 +31,30 @@ function Counter() {
   );
 }
 ```
+
+```tsx [Object Oriented]
+import { reactive } from "mobx-lite";
+
+export class CounterState {
+  count = 0;
+  constructor() {
+    reactive(this);
+  }
+  increase() {
+    this.count++;
+  }
+}
+
+const counter = new CounterState();
+
+function Counter() {
+  return (
+    <div>
+      <span>{counter.count}</span>
+      <button onClick={counter.increase}>Increase</button>
+    </div>
+  );
+}
+```
+
+:::

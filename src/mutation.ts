@@ -1,3 +1,4 @@
+import { transaction } from "mobx";
 import { reactive } from ".";
 
 type IdleInternalState<T> = {
@@ -14,33 +15,39 @@ type InternalState<T> = ActiveInternalState<T> | IdleInternalState<T>;
 
 type Params = Record<string, any>;
 
-type State<P extends Params, T> =
+type BaseMutation<P extends Params, T> =
   | {
-      status: "IDLE";
+      error: null;
+      isPending: true;
+      pendingParams: P;
+      value: null;
     }
   | {
-      status: "PENDING";
-      params: P;
-    }
-  | {
-      status: "RESOLVED";
-      value: T;
-    }
-  | {
-      status: "REJECTED";
       error: Error;
-      params: P;
+      isPending: false;
+      pendingParams: P;
+      value: null;
+    }
+  | {
+      error: null;
+      isPending: false;
+      pendingParams: null;
+      value: null;
+    }
+  | {
+      error: null;
+      isPending: false;
+      pendingParams: null;
+      value: T;
     };
 
 // Modified MutationWithParams for cases with parameters
-type MutationWithParams<T, P extends Params> = {
-  state: State<P, T>;
+type MutationWithParams<T, P extends Params> = BaseMutation<P, T> & {
   mutate(params: P): Promise<T>;
 };
 
 // Added MutationWithoutParams for cases without parameters
-type MutationWithoutParams<T> = {
-  state: State<{}, T>;
+type MutationWithoutParams<T> = BaseMutation<{}, T> & {
   mutate(): Promise<T>;
 };
 
@@ -61,9 +68,10 @@ export function mutation<T, P extends Params = {}>(
   const mutationState = reactive<
     MutationWithParams<T, P> | MutationWithoutParams<T>
   >({
-    state: {
-      status: "IDLE",
-    },
+    error: null,
+    isPending: false,
+    pendingParams: null,
+    value: null,
     mutate,
   });
 
@@ -77,7 +85,14 @@ export function mutation<T, P extends Params = {}>(
 
     const abortController = new AbortController();
 
-    mutationState.state = { status: "PENDING", params: params as P };
+    transaction(() => {
+      Object.assign(mutationState, {
+        error: null,
+        isPending: true,
+        pendingParams: params as P,
+        value: null,
+      });
+    });
 
     const promise = mutator(params)
       .then((value) => {
@@ -85,7 +100,14 @@ export function mutation<T, P extends Params = {}>(
           return value;
         }
 
-        mutationState.state = { status: "RESOLVED", value };
+        transaction(() => {
+          Object.assign(mutationState, {
+            error: null,
+            isPending: false,
+            pendingParams: null,
+            value,
+          });
+        });
         internalState = { current: "IDLE" };
 
         return value;
@@ -95,11 +117,14 @@ export function mutation<T, P extends Params = {}>(
           throw error;
         }
 
-        mutationState.state = {
-          status: "REJECTED",
-          error,
-          params: params as P,
-        };
+        transaction(() => {
+          Object.assign(mutationState, {
+            error,
+            isPending: false,
+            pendingParams: params as P,
+            value: null,
+          });
+        });
         internalState = { current: "IDLE" };
 
         throw error;

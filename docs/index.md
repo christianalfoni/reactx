@@ -3,22 +3,22 @@
 layout: home
 
 hero:
-  name: "Mobx Reactive"
+  name: "Mobx Lite"
   text: "Mobx Reimagined"
-  tagline: Closing the gap between Mobx state management and React
+  tagline: A single powerful primitive
   actions:
     - theme: brand
       text: Get Started
       link: /get-started
     - theme: alt
-      text: API Examples
-      link: /api-examples
+      text: API
+      link: /api
 
 features:
-  - title: Closer to React
-    details: Instead of the traditional usage of classes, you rather write your state management like you write components
+  - title: Functional or Object Oriented
+    details: Choose your paradigm. Write state management more like you express components or use traditional classes
   - title: Simple
     details: A single primitive, transparent observation and patterns that help you organise and structure your state management
   - title: Clear mental model
-    details: Untangle state management from your React components and get a clear separation of state management and deriving a UI from that state
+    details: Untangle state management from your components and get a clear separation of state management and deriving a UI from that state
 ---

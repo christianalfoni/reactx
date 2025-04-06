@@ -1,43 +1,66 @@
+import { transaction } from "mobx";
 import { reactive } from ".";
 
 type IdleInternalState = {
   current: "IDLE";
 };
 
-type ActiveInternalState<T> = {
+type ActiveInternalState = {
   current: "ACTIVE";
   abortController: AbortController;
-  promise: SuspensePromise<T>;
 };
 
-type InternalState<T> = ActiveInternalState<T> | IdleInternalState;
+type ExpiredInternalState = {
+  current: "EXPIRED";
+  abortController: AbortController;
+};
+
+type InternalState =
+  | ActiveInternalState
+  | IdleInternalState
+  | ExpiredInternalState;
 
 function unwrapGetter(value: unknown) {
   return typeof value === "function" ? value() : value;
 }
 
-export type QueryState<T> = {
-  isRevalidating: boolean;
-} & (
-  | {
-      status: "PENDING";
-    }
-  | {
-      status: "RESOLVED";
-      value: T;
-    }
-  | {
-      status: "REJECTED";
-      error: Error;
-    }
-);
-
-type Query<T> = {
-  state: QueryState<T>;
-  promise: SuspensePromise<T>;
+type BaseQuery<T> = {
   revalidate: () => Promise<T>;
   fetch: () => Promise<T>;
+  subscribe: (subscription: () => void) => () => void;
 };
+
+export type QueryState<T> =
+  | {
+      promise: SuspensePromise<T>;
+      error: null;
+      value: null;
+      isRevalidating: false;
+      isFetching: true;
+    }
+  | {
+      promise: SuspensePromise<T>;
+      error: Error;
+      value: null;
+      isRevalidating: false;
+      isFetching: false;
+    }
+  | {
+      promise: SuspensePromise<T>;
+      error: null;
+      value: T;
+      isRevalidating: false;
+      isFetching: false;
+    }
+  | {
+      promise: SuspensePromise<T>;
+      error: null;
+      value: T;
+      isRevalidating: true;
+      isFetching: false;
+    };
+
+type Query<T> = BaseQuery<T> & QueryState<T>;
 
 export function query<T>(fetcher: () => Promise<T>): Query<T>;
 export function query<T, O>(
@@ -48,121 +71,163 @@ export function query<T, O>(
   fetcher: () => Promise<T>,
   setter?: (data: T) => () => O
 ): Query<T> | Query<O> {
-  const state = reactive<{ query: QueryState<T>; internal: InternalState<T> }>({
-    query: {
-      isRevalidating: false,
-      status: "PENDING",
-    },
-    internal: {
-      current: "IDLE",
-    },
+  const subscriptions = new Set<() => void>();
+  let internalState: InternalState = { current: "IDLE" };
+  const state = reactive<QueryState<T>>({
+    error: null,
+    value: null,
+    isRevalidating: false,
+    isFetching: true,
+    // This will be set when any of the state is accessed
+    promise: null as unknown as SuspensePromise<T>,
   });
 
-  const queryState = reactive<Query<T>>({
-    get state() {
-      if (state.internal.current === "IDLE") {
+  const queryState = reactive({
+    get error() {
+      if (internalState.current !== "ACTIVE") {
         fetch();
       }
 
-      return state.query;
+      return state.error;
     },
-    set state(newState) {
-      state.query = newState;
+    get value() {
+      if (internalState.current !== "ACTIVE") {
+        fetch();
+      }
+
+      return state.value;
+    },
+    get isFetching() {
+      if (internalState.current !== "ACTIVE") {
+        fetch();
+      }
+
+      return state.isFetching;
+    },
+    get isRevalidating() {
+      if (internalState.current !== "ACTIVE") {
+        fetch();
+      }
+
+      return state.isRevalidating;
     },
     get promise() {
-      const internalState =
-        state.internal.current === "IDLE" ? fetch() : state.internal;
+      if (internalState.current !== "ACTIVE") {
+        fetch();
+      }
 
       if (!setter) {
-        return internalState.promise;
+        return state.promise;
       }
 
-      switch (internalState.promise.status) {
+      switch (state.promise.status) {
         case "fulfilled":
           return createFulfilledPromise(
-            internalState.promise.then(unwrapGetter),
-            unwrapGetter(internalState.promise.value)
+            state.promise.then(unwrapGetter),
+            unwrapGetter(state.promise.value)
           );
         case "pending": {
-          return createPendingPromise(internalState.promise.then(unwrapGetter));
+          return createPendingPromise(state.promise.then(unwrapGetter));
         }
         case "rejected": {
-          return internalState.promise;
+          return state.promise;
         }
       }
     },
-    set promise(newPromise) {
-      (state.internal as ActiveInternalState<T>).promise = newPromise;
-    },
+    fetch,
     revalidate,
-    fetch() {
-      return fetch().promise;
-    },
+    subscribe,
   });
 
-  return queryState;
+  return queryState as Query<T>;
 
-  function executeQuery(): ActiveInternalState<T> {
-    if (state.internal.current === "ACTIVE") {
-      state.internal.abortController.abort();
+  function subscribe(subscription: () => void) {
+    if (internalState.current === "IDLE") {
+      throw new Error("You can not subscribe to a state is not active");
+    }
+
+    internalState.current = "ACTIVE";
+
+    subscriptions.add(subscription);
+
+    return () => {
+      subscriptions.delete(subscription);
+
+      if (subscriptions.size === 0) {
+        internalState.current = "EXPIRED";
+      }
+    };
+  }
+
+  function executeQuery() {
+    if (internalState.current !== "IDLE") {
+      internalState.abortController.abort();
     }
 
     const abortController = new AbortController();
 
-    state.query.isRevalidating = true;
+    state.isRevalidating = true;
 
     const observablePromise = createObservablePromise<T>(
       fetcher().then((data) => (setter ? setter(data) : data)),
       abortController,
       (promise) => {
-        newInternalState.promise = promise;
-        queryState.promise = promise;
-
         if (promise.status === "fulfilled") {
           const value = promise.value;
-          queryState.state = {
-            status: "RESOLVED",
-            get value() {
-              return unwrapGetter(value);
-            },
-            isRevalidating: false,
-          };
+          transaction(() => {
+            Object.assign(state, {
+              error: null,
+              isFetching: false,
+              promise,
+              get value() {
+                return unwrapGetter(value);
+              },
+              isRevalidating: false,
+            });
+          });
         } else {
-          queryState.state = {
-            status: "REJECTED",
-            error: promise.reason,
-            isRevalidating: false,
-          };
+          transaction(() => {
+            Object.assign(state, {
+              error: promise.reason,
+              isFetching: false,
+              promise,
+              isRevalidating: false,
+              value: null,
+            });
+          });
         }
       }
     );
 
-    const newInternalState: ActiveInternalState<T> = {
+    internalState = {
       current: "ACTIVE",
       abortController,
-      promise: observablePromise,
     };
 
-    return newInternalState;
+    return observablePromise;
   }
 
-  function fetch(): ActiveInternalState<T> {
-    const activeInternalState = (state.internal = executeQuery());
+  function fetch() {
+    const promise = executeQuery();
 
-    queryState.state = {
-      status: "PENDING",
-      isRevalidating: true,
-    };
+    transaction(() => {
+      Object.assign(state, {
+        isFetching: true,
+        isRevalidating: false,
+        promise,
+        value: null,
+      });
+    });
 
-    return activeInternalState;
+    return promise;
   }
 
   function revalidate(): Promise<T> {
-    if (state.internal.current === "IDLE") {
-      return fetch().promise;
+    if (internalState.current !== "ACTIVE") {
+      return fetch();
     }
 
-    return executeQuery().promise;
+    return executeQuery();
   }
 }
 
