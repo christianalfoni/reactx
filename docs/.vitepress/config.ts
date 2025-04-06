@@ -40,7 +40,15 @@ export default defineConfig({
             text: "Explicit states",
             link: "/explicit-states",
           },
+
           { text: "Data queries", link: "/data-queries" },
+          { text: "Data mutations", link: "/data-mutations" },
+          { text: "Multiple UX", link: "/multiple-ux" },
+          {
+            text: "Environment dependencies",
+            link: "/environment-dependencies",
+          },
+          { text: "Subscriptions", link: "/subscriptions" },
         ],
       },
       {

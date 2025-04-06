@@ -2,7 +2,139 @@
 
 Comparing functions and classes has nothing to do with "which one is better". It is about surfacing how they differ and how they are similar. There is nothing you can do with a function that you can not do in a class, and the opposite. Their differences is more about ergonomics and what you feel most comfortable with.
 
-Let us look at a silly example that shows how functions and classes compare, where we focus on how we express the same state and behavior.
+The benefits of a **function** is:
+
+- No keywords
+- No `this` binding
+- No constructor method
+- It is a function, just like a component
+
+The benefits of a **class** is:
+
+- It has explicit private members
+- It has explicit public members
+- The class is also the type
+- You can pass parent state to nested state using `this` in the constructor
+- No explicit typing of self referencing `getters`
+
+## Creating state
+
+::: code-group
+
+```ts [Functional]
+export type CounterState = ReturnType<typeof CounterState>;
+
+function CounterState() {
+  const state = reactive({
+    count: 0,
+    increase,
+  });
+
+  return state;
+
+  function increase() {
+    state.count++;
+  }
+}
+```
+
+```ts [Object Oriented]
+export class CounterState {
+  count = 0;
+  constructor() {
+    reactive(this);
+  }
+  increase() {
+    this.count++;
+  }
+}
+```
+
+:::
+
+## Passing parameters
+
+::: code-group
+
+```ts [Functional]
+export type CounterState = ReturnType<typeof CounterState>;
+
+export function CounterState(initialState: number) {
+  const state = reactive({
+    count: initialState,
+    increase,
+  });
+
+  return state;
+
+  function increase() {
+    state.count++;
+  }
+}
+```
+
+```ts [Object Oriented]
+export class CounterState {
+  count: number;
+  constructor(initialState: number) {
+    reactive(this);
+    this.count = initialState;
+  }
+  increase() {
+    this.count++;
+  }
+}
+```
+
+:::
+
+## Private VS Public
+
+::: code-group
+
+```ts [Functional]
+export type CounterState = ReturnType<typeof CounterState>;
+
+function CounterState() {
+  const state = reactive({
+    count: 0,
+    dispose,
+  });
+
+  let interval = setInterval(increase, 1000);
+
+  return state;
+
+  function increase() {
+    state.count++;
+  }
+
+  function dispose() {
+    clearInterval(interval);
+  }
+}
+```
+
+```ts [Object Oriented]
+export class CounterState {
+  count = 0;
+  private interval: NodeJS.Timeout;
+  constructor() {
+    reactive(this);
+    this.interval = setInterval(() => this.increase(), 1000);
+  }
+  dispose() {
+    clearInterval(this.interval);
+  }
+  private increase() {
+    this.count++;
+  }
+}
+```
+
+:::
+
+## Nested state
 
 ::: code-group
 
@@ -22,39 +154,20 @@ function NestedState(counter: CounterState) {
 
 export type CounterState = ReturnType<typeof CounterState>;
 
-function CounterState(initialCount: number) {
-  const subscribers = new Set<() => void>();
+function CounterState() {
   const counter = reactive({
-    count: initialCount,
+    count: 0,
     increase,
-    subscribe,
     get nested() {
       return nested;
     },
   });
   const nested = NestedState(counter);
 
-  setInterval(increaseDouble, 1000);
-
   return counter;
-
-  function notify() {
-    subscribers.forEach((subscriber) => subscriber());
-  }
-
-  function increaseDouble() {
-    counter.count += 2;
-    notify();
-  }
 
   function increase() {
     counter.count++;
-    notify();
-  }
-
-  function subscribe(subscriber: () => void) {
-    subscribers.add(subscriber);
-    return () => subscribers.delete(subscriber);
   }
 }
 ```
@@ -64,52 +177,22 @@ import { reactive } from "mobx-lite";
 
 class NestedState {
   localState = "foo";
-  constructor(private counter: CounterState) {
+  constructor(public counter: CounterState) {
     reactive(this);
   }
 }
 
 class CounterState {
-  private subscribers = new Set<() => void>();
   count = 0;
   nested: NestedState;
-  constructor(initialCount: number) {
-    reactive(this);
-    this.count = initialCount;
+  constructor() {
     this.nested = new NestedState(this);
-    setInterval(() => this.increaseDouble(), 1000);
-  }
-  private increaseDouble() {
-    this.count += 2;
-    this.notify();
-  }
-  private notify() {
-    this.subscribers.forEach((subscriber) => subscriber());
+    reactive(this);
   }
   increase() {
     this.count++;
-    this.notify();
-  }
-  subscribe(subscriber: () => void) {
-    this.subscribers.add(subscriber);
-    return () => this.subscribers.delete(subscriber);
   }
 }
 ```
 
 :::
-
-The benefits of a **function** is:
-
-- No keywords
-- No `this` binding
-- No constructor method
-- It is a function, just like a component
-
-The benefits of a **class** is:
-
-- It has explicit private members
-- It has explicit public members
-- The class is also the type
-- You can pass parent state to nested state using `this` in the constructor
-- No explicit typing of self referencing `getters`
