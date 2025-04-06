@@ -5,7 +5,7 @@ layout: home
 hero:
   name: "Mobx Lite"
   text: "Mobx Reimagined"
-  tagline: A single powerful primitive
+  tagline: Managing state in rich client applications
   actions:
     - theme: brand
       text: Get Started
