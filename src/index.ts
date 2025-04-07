@@ -12,8 +12,10 @@ export namespace reactive {
   export type Mutation<T, P = void> = mutation.Mutation<T, P>;
 }
 
-export function reactive<T extends Record<string, any>>(value: T): T {
-  return makeAutoObservable(value);
+export function reactive<T extends Record<string, any>>(
+  ...params: Parameters<typeof makeAutoObservable>
+) {
+  return makeAutoObservable(...params) as T;
 }
 
 reactive.readonly = readonly;

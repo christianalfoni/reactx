@@ -20,10 +20,6 @@ type InternalState =
   | IdleInternalState
   | ExpiredInternalState;
 
-function unwrapGetter(value: unknown) {
-  return typeof value === "function" ? value() : value;
-}
-
 type BaseQuery<T> = {
   revalidate: () => Promise<T>;
   fetch: () => Promise<T>;
@@ -155,9 +151,7 @@ export function query<T>(fetcher: () => Promise<T>): Query<T> {
               error: null,
               isFetching: false,
               promise,
-              get value() {
-                return unwrapGetter(value);
-              },
+              value,
               isRevalidating: false,
             });
           });
@@ -240,9 +234,7 @@ export function createFulfilledPromise<T>(
 ): FulfilledPromise<T> {
   return Object.assign(promise, {
     status: "fulfilled" as const,
-    get value() {
-      return unwrapGetter(value);
-    },
+    value,
   });
 }
 
