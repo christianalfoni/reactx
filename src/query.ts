@@ -60,17 +60,9 @@ export type QueryState<T> =
       isFetching: false;
     };
 
-type Query<T> = BaseQuery<T> & QueryState<T>;
+export type Query<T> = BaseQuery<T> & QueryState<T>;
 
-export function query<T>(fetcher: () => Promise<T>): Query<T>;
-export function query<T, O>(
-  fetcher: () => Promise<T>,
-  setter: (data: T) => () => O
-): Query<O>;
-export function query<T, O>(
-  fetcher: () => Promise<T>,
-  setter?: (data: T) => () => O
-): Query<T> | Query<O> {
+export function query<T>(fetcher: () => Promise<T>): Query<T> {
   let subscriptionCount = 0;
   let internalState: InternalState = { current: "IDLE" };
   const state = reactive<QueryState<T>>({
@@ -116,23 +108,7 @@ export function query<T, O>(
         fetch();
       }
 
-      if (!setter) {
-        return state.promise;
-      }
-
-      switch (state.promise.status) {
-        case "fulfilled":
-          return createFulfilledPromise(
-            state.promise.then(unwrapGetter),
-            unwrapGetter(state.promise.value)
-          );
-        case "pending": {
-          return createPendingPromise(state.promise.then(unwrapGetter));
-        }
-        case "rejected": {
-          return state.promise;
-        }
-      }
+      return state.promise;
     },
     fetch,
     revalidate,
@@ -169,7 +145,7 @@ export function query<T, O>(
     state.isRevalidating = true;
 
     const observablePromise = createObservablePromise<T>(
-      fetcher().then((data) => (setter ? setter(data) : data)),
+      fetcher(),
       abortController,
       (promise) => {
         if (promise.status === "fulfilled") {

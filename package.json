@@ -1,6 +1,6 @@
 {
   "name": "mobx-lite",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Managing state in rich client applications",
   "keywords": [
     "state",

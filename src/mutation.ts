@@ -13,9 +13,9 @@ type ActiveInternalState<T> = {
 
 type InternalState<T> = ActiveInternalState<T> | IdleInternalState<T>;
 
-type Params = Record<string, any>;
+export type Params = Record<string, any>;
 
-type BaseMutation<P extends Params, T> =
+type BaseMutation<P extends Params | void, T> =
   | {
       error: null;
       isPending: true;
@@ -41,33 +41,17 @@ type BaseMutation<P extends Params, T> =
       value: T;
     };
 
-// Modified MutationWithParams for cases with parameters
-type MutationWithParams<T, P extends Params> = BaseMutation<P, T> & {
-  mutate(params: P): Promise<T>;
+export type Mutation<T, P extends Params | void> = BaseMutation<P, T> & {
+  mutate: (...args: P extends void ? [] : [P]) => Promise<T>;
 };
-
-// Added MutationWithoutParams for cases without parameters
-type MutationWithoutParams<T> = BaseMutation<{}, T> & {
-  mutate(): Promise<T>;
-};
-
-// Export function overloads
-export function mutation<T>(
-  mutator: () => Promise<T>
-): MutationWithoutParams<T>;
-export function mutation<T, P extends Params>(
-  mutator: (params: P) => Promise<T>
-): MutationWithParams<T, P>;
 
 // Implementation that handles both cases
-export function mutation<T, P extends Params = {}>(
-  mutator: (params?: P) => Promise<T>
-): MutationWithParams<T, P> | MutationWithoutParams<T> {
+export function mutation<T, P extends Params | void = void>(
+  mutator: (...args: P extends void ? [] : [P]) => Promise<T>
+): Mutation<T, P> {
   let internalState: InternalState<T> = { current: "IDLE" };
 
-  const mutationState = reactive<
-    MutationWithParams<T, P> | MutationWithoutParams<T>
-  >({
+  const mutationState = reactive<Mutation<T, P>>({
     error: null,
     isPending: false,
     pendingParams: null,
@@ -77,7 +61,9 @@ export function mutation<T, P extends Params = {}>(
 
   return mutationState;
 
-  function mutate(params?: P) {
+  function mutate(...args: P extends void ? [] : [P]): Promise<T> {
+    const params = args[0] as P;
+
     // Cancel any ongoing request
     if (internalState.current === "ACTIVE") {
       internalState.abortController.abort();
@@ -94,7 +80,7 @@ export function mutation<T, P extends Params = {}>(
       });
     });
 
-    const promise = mutator(params)
+    const promise = mutator(...args)
       .then((value) => {
         if (abortController.signal.aborted) {
           return value;
