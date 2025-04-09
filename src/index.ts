@@ -9,7 +9,7 @@ configure({
 
 export namespace reactive {
   export type Query<T> = query.Query<T>;
-  export type Mutation<T, P = void> = mutation.Mutation<T, P>;
+  export type Mutation<T, P extends any[]> = mutation.Mutation<T, P>;
 }
 
 export function reactive<T extends Record<string, any>>(
