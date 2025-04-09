@@ -5,7 +5,7 @@ layout: home
 hero:
   name: "Mobx Lite"
   text: "Mobx Reimagined"
-  tagline: Managing state in rich client applications
+  tagline: Managing state and data in rich client applications
   actions:
     - theme: brand
       text: Get Started
@@ -20,5 +20,5 @@ features:
   - title: Simple
     details: A single primitive, transparent observation and patterns that help you organise and structure your state management
   - title: Clear mental model
-    details: Untangle state management from your components and get a clear separation of state management and deriving a UI from that state
+    details: Untangle state management from your components and get a clear separation of state and deriving a UI from that state
 ---

@@ -49,30 +49,40 @@ By simply using a pattern we can resolve this:
 ```ts [Functional]
 import { reactive } from "mobx-lite";
 
+type IDLE = {
+  current: "IDLE";
+  start(): void;
+};
+
+type COUNTING = {
+  current: "COUNTING";
+  stop(): void;
+};
+
 function CounterState() {
   const counter = reactive({
-    state: IDLE(),
+    state: IDLE() as IDLE | COUNTING,
     count: 0,
   });
 
   return counter;
 
-  function IDLE() {
+  function IDLE(): IDLE {
     return {
-      current: "IDLE" as const,
+      current: "IDLE",
       start() {
         counter.state = COUNTING();
       },
     };
   }
 
-  function COUNTING() {
+  function COUNTING(): COUNTING {
     const interval = setInterval(() => {
       counter.count++;
     }, 1000);
 
     return {
-      current: "COUNTING" as const,
+      current: "COUNTING",
       stop() {
         clearInterval(interval);
         counter.state = IDLE();
