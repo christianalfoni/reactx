@@ -39,8 +39,8 @@ type BaseMutation<T, P> =
       value: T;
     };
 
-export type Mutation<T, P> = BaseMutation<T, P> & {
-  mutate: (...args: P extends void ? [] : [P]) => Promise<T>;
+export type Mutation<T, P extends any[]> = BaseMutation<T, P> & {
+  mutate: (...args: P) => Promise<T>;
 };
 
 // Implementation that handles both cases
