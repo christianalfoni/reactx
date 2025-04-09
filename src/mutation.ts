@@ -13,7 +13,7 @@ type ActiveInternalState<T> = {
 
 type InternalState<T> = ActiveInternalState<T> | IdleInternalState<T>;
 
-type BaseMutation<P, T> =
+type BaseMutation<T, P> =
   | {
       error: null;
       isPending: true;
@@ -39,13 +39,13 @@ type BaseMutation<P, T> =
       value: T;
     };
 
-export type Mutation<T, P> = BaseMutation<P, T> & {
+export type Mutation<T, P> = BaseMutation<T, P> & {
   mutate: (...args: P extends void ? [] : [P]) => Promise<T>;
 };
 
 // Implementation that handles both cases
-export function mutation<T, P = void>(
-  mutator: (...args: P extends void ? [] : [P]) => Promise<T>
+export function mutation<T, P extends any[]>(
+  mutator: (...args: P) => Promise<T>
 ): Mutation<T, P> {
   let internalState: InternalState<T> = { current: "IDLE" };
 
@@ -59,7 +59,7 @@ export function mutation<T, P = void>(
 
   return mutationState;
 
-  function mutate(...args: P extends void ? [] : [P]): Promise<T> {
+  function mutate(...args: P): Promise<T> {
     const params = args[0] as P;
 
     // Cancel any ongoing request
