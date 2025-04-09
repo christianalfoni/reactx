@@ -11,7 +11,7 @@ import { reactive } from "mobx-lite";
 
 function Data() {
   const data = reactive({
-    todos: reactive.query(fetchTodos),
+    todosQuery: reactive.query(fetchTodos),
   });
 
   return data;
@@ -26,7 +26,7 @@ function Data() {
 import { reactive } from "mobx-lite";
 
 class Data {
-  todos = reactive.query(() => this.fetchTodos());
+  todosQuery = reactive.query(() => this.fetchTodos());
   constructor() {
     reactive(this);
   }
@@ -38,26 +38,27 @@ class Data {
 
 :::
 
-The query exposes a `state` and `promise` property that you can use to track the state of the query in a component or in your state management.
+The query exposes several properties that you can use to track the state of the query in a component or in your state management.
 
 ```tsx
 function Todos({ data }) {
-  const state = data.todos.state;
+  const { isFetching, value, error, isRevalidating } = data.todosQuery;
 
-  switch (state.status) {
-    case "PENDING":
-      return <div>Loading...</div>;
-    case "REJECTED":
-      return <div>{state.error.message}</div>;
-    case "FULFILLED":
-      return (
-        <div>
-          {state.data.map((todo) => (
-            <div key={todo.id}>{todo.title}</div>
-          ))}
-        </div>
-      );
+  if (isFetching) {
+    return <div>Loading...</div>;
   }
+
+  if (error) {
+    return <div>{error.message}</div>;
+  }
+
+  return (
+    <div>
+      {value.map((todo) => (
+        <div key={todo.id}>{todo.title}</div>
+      ))}
+    </div>
+  );
 }
 ```
 
@@ -65,7 +66,7 @@ Or you can consume a suspense compatible promise:
 
 ```tsx
 function Todos({ data }) {
-  const todos = use(data.todos.promise);
+  const todos = use(data.todosQuery.promise);
 
   return (
     <div>
@@ -77,8 +78,12 @@ function Todos({ data }) {
 }
 ```
 
+You can also call `fetch`, to force a fetch, or `revalidate` to update the value in the background.
+
 ::: info
 
-The query is **lazy** which means it will only start fetching the initial data when either `state` or `promise` is consumed, or any method is called on the query.
+The query is **lazy** which means it will only start fetching the initial data when either of the properties of the query is accessed.
+
+Any call to `fetch` or `revalidate` will abort the current pending request, if any.
 
 :::

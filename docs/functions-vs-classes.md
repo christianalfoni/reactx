@@ -5,7 +5,7 @@ Comparing functions and classes has nothing to do with "which one is better". It
 The benefits of a **function** is:
 
 - No keywords
-- No `this` binding
+- No implicit `this` binding
 - No constructor method
 - It is a function, just like a component
 
@@ -57,8 +57,6 @@ export class CounterState {
 ::: code-group
 
 ```ts [Functional]
-export type CounterState = ReturnType<typeof CounterState>;
-
 export function CounterState(initialState: number) {
   const state = reactive({
     count: initialState,
@@ -93,8 +91,6 @@ export class CounterState {
 ::: code-group
 
 ```ts [Functional]
-export type CounterState = ReturnType<typeof CounterState>;
-
 function CounterState() {
   const state = reactive({
     count: 0,
@@ -127,69 +123,6 @@ export class CounterState {
     clearInterval(this.interval);
   }
   private increase() {
-    this.count++;
-  }
-}
-```
-
-:::
-
-## Nested state
-
-::: code-group
-
-```ts [Functional]
-import { reactive } from "mobx-lite";
-
-export type NestedState = ReturnType<typeof NestedState>;
-
-function NestedState(counter: CounterState) {
-  const nested = reactive({
-    counter,
-    localState: "foo",
-  });
-
-  return nested;
-}
-
-export type CounterState = ReturnType<typeof CounterState>;
-
-function CounterState() {
-  const counter = reactive({
-    count: 0,
-    increase,
-    get nested() {
-      return nested;
-    },
-  });
-  const nested = NestedState(counter);
-
-  return counter;
-
-  function increase() {
-    counter.count++;
-  }
-}
-```
-
-```ts [Object Oriented]
-import { reactive } from "mobx-lite";
-
-class NestedState {
-  localState = "foo";
-  constructor(public counter: CounterState) {
-    reactive(this);
-  }
-}
-
-class CounterState {
-  count = 0;
-  nested: NestedState;
-  constructor() {
-    this.nested = new NestedState(this);
-    reactive(this);
-  }
-  increase() {
     this.count++;
   }
 }

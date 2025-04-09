@@ -6,15 +6,15 @@
 import { reactive } from "mobx-lite";
 
 function CounterState() {
-  const counter = reactive({
+  const state = reactive({
     count: 0,
     increase,
   });
 
-  return reactive.readonly(counter);
+  return reactive.readonly(state);
 
   function increase() {
-    counter.count++;
+    state.count++;
   }
 }
 ```

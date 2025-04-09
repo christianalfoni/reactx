@@ -12,7 +12,7 @@ Each component can define UI elements, their associated styles, and manage state
 
 However, not all components handle elements and state equally—some components are purely presentational (elements only), some are stateful (state only), and others combine both. As your application grows more complex and requires greater sharing of state across components, managing state within components can quickly become cumbersome. The UI tree and individual components expand significantly, making it increasingly difficult to differentiate clearly between state management and UI elements.
 
-At a point it is better to separate state management from your UI components.
+At a point it is better to separate state management from your UI components:
 
 ![Separate State Management](./ui-3.png){width=250px .light-only}
 ![Separate State Management Dark Mode](./ui-3-dark.png){width=250px .dark-only}

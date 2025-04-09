@@ -1,61 +1,51 @@
 # Data mutations
 
-Another aspect of data is mutations. Even though mutations also represents a request to the server, returning a promise, it has a very different behavior from a `query`.
+Another aspect of data is mutations. Even though mutations also represents a request to the server, returning a promise, it has a very different behavior than a `query`.
 
 An important aspect of performing mutations is showing optimistic data.
 
 ::: code-group
 
 ```ts [Functional]
-function Data() {
-  const data = reactive({
-    todos: reactive.query(fetchTodos),
-    addTodo: reactive.mutation(addTodo),
+function TodosState() {
+  const state = reactive({
+    todosQuery: reactive.query(fetchTodos),
+    addTodoMutation: reactive.mutation(addTodo),
   });
 
-  return data;
+  return state;
 
   function fetchTodos() {
     return fetch("/todos").then((response) => response.json());
   }
 
-  function addTodo({
-    title,
-    completed,
-  }: {
-    title: string;
-    completed: boolean;
-  }) {
+  function addTodo(title: string) {
     await fetch("/todos", {
       method: "POST",
-      body: JSON.stringify({ title, completed }),
+      body: JSON.stringify({ title, completed: false }),
     });
-    await data.todos.revalidate();
+
+    await state.todosQuery.revalidate();
   }
 }
 ```
 
 ```ts [Object Oriented]
-type AddTodoParams = {
-  title: string;
-  completed: boolean;
-};
-
 class Data {
-  todos = reactive.query(() => this.fetchTodos());
-  addTodo = reactive.mutation((params: AddTodoParams) => this.addTodo(params));
+  todosQuery = reactive.query(() => this.fetchTodos());
+  addTodoMutation = reactive.mutation((title: string) => this.addTodo(title));
   constructor() {
     reactive(this);
   }
   private fetchTodos() {
     return fetch("/todos").then((response) => response.json());
   }
-  private async addTodo({ title, completed }: AddTodoParams) {
+  private async addTodo(title: string) {
     await fetch("/todos", {
       method: "POST",
-      body: JSON.stringify({ title, completed }),
+      body: JSON.stringify({ title, completed: false }),
     });
-    await this.todos.revalidate();
+    await this.todosQuery.revalidate();
   }
 }
 ```
@@ -65,24 +55,24 @@ class Data {
 The mutation has a `mutate` method to call the mutation, but it also exposes the state of the mutation itself.
 
 ```tsx
-function Todos({ data }) {
-  const todos = use(data.todos.promise);
-  const addTodo = data.addTodo;
+function Todos({ todos }) {
+  const { todosQuery, addTodoMutation } = todos;
+  const todos = use(todosQuery.promise);
 
   return (
     <div>
       <button
-        onClick={() => addTodo.mutate({ title: "New Todo", completed: false })}
+        onClick={() => {
+          addTodoMutation.mutate("New Todo");
+        }}
       >
         Add Todo
       </button>
-      {addTodo.state.status === "REJECTED" && (
-        <p>Error: {addTodo.state.error.message}</p>
-      )}
+      {addTodoMutation.error && <p>Error: {addTodoMutation.error.message}</p>}
       <ul>
-        {addTodo.state.status === "PENDING" ? (
-          <li>{addTodo.state.params.title}</li>
-        ) : null}
+        {addTodoMutation.pendingParams && (
+          <li>{addTodoMutation.pendingParams[0]}</li>
+        )}
         {todos.map((todo) => (
           <li key={todo.id}>{todo.title}</li>
         ))}

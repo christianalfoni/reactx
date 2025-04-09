@@ -5,18 +5,16 @@
 ```tsx [Functional]
 import { reactive } from "mobx-lite";
 
-export type CounterState = ReturnType<typeof CounterState>;
-
 function CounterState() {
-  const counter = reactive({
+  const state = reactive({
     count: 0,
     increase,
   });
 
-  return counter;
+  return state;
 
   function increase() {
-    counter.count++;
+    state.count++;
   }
 }
 

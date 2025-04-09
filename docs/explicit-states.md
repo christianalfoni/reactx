@@ -49,43 +49,33 @@ By simply using a pattern we can resolve this:
 ```ts [Functional]
 import { reactive } from "mobx-lite";
 
-type IDLE = {
-  current: "IDLE";
-  start(): void;
-};
-
-type COUNTING = {
-  current: "COUNTING";
-  stop(): void;
-};
-
 function CounterState() {
-  const counter = reactive({
-    state: IDLE() as IDLE | COUNTING,
+  const state = reactive({
+    state: IDLE() as ReturnType<typeof IDLE> | ReturnType<typeof COUNTING>,
     count: 0,
   });
 
-  return counter;
+  return state;
 
-  function IDLE(): IDLE {
+  function IDLE() {
     return {
-      current: "IDLE",
+      current: "IDLE" as const,
       start() {
-        counter.state = COUNTING();
+        state.state = COUNTING();
       },
     };
   }
 
-  function COUNTING(): COUNTING {
+  function COUNTING() {
     const interval = setInterval(() => {
-      counter.count++;
+      state.count++;
     }, 1000);
 
     return {
-      current: "COUNTING",
+      current: "COUNTING" as const,
       stop() {
         clearInterval(interval);
-        counter.state = IDLE();
+        state.state = IDLE();
       },
     };
   }
@@ -101,7 +91,7 @@ class IDLE {
     reactive(this);
   }
   start() {
-    return new COUNTING(this.counter);
+    this.counter.state = new COUNTING(this.counter);
   }
 }
 
@@ -116,7 +106,7 @@ class COUNTING {
   }
   stop() {
     clearInterval(this.interval);
-    return new IDLE(this.counter);
+    this.counter.state = new IDLE(this.counter);
   }
 }
 
