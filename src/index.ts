@@ -12,12 +12,12 @@ export namespace reactive {
   export type Mutation<T, P extends any[]> = mutation.Mutation<T, P>;
 }
 
-export function reactive<T extends Record<string, any>>(
-  ...params: Parameters<typeof makeAutoObservable>
-) {
-  return makeAutoObservable(...params) as T;
-}
-
-reactive.readonly = readonly;
-reactive.query = query.query;
-reactive.mutation = mutation.mutation;
+export const reactive: typeof makeAutoObservable & {
+  readonly: typeof readonly;
+  query: typeof query.query;
+  mutation: typeof mutation.mutation;
+} = Object.assign(makeAutoObservable, {
+  readonly,
+  query: query.query,
+  mutation: mutation.mutation,
+});
