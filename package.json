@@ -1,6 +1,6 @@
 {
   "name": "mobx-lite",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Managing state in rich client applications",
   "keywords": [
     "state",
@@ -45,7 +45,7 @@
     "build:esm": "tsc -p ./tsconfig.build-esm.json",
     "clean": "rimraf ./dist ./dist-babel-plugin ./dist-swc-plugin",
     "test": "vitest",
-    "prepublish": "yarn build",
+    "prepare": "yarn build",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"
