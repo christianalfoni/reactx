@@ -59,9 +59,7 @@ export function mutation<T, P extends any[]>(
 
   return mutationState;
 
-  function mutate(...args: P): Promise<T> {
-    const params = args[0] as P;
-
+  function mutate(...params: P): Promise<T> {
     // Cancel any ongoing request
     if (internalState.current === "ACTIVE") {
       internalState.abortController.abort();
@@ -73,12 +71,12 @@ export function mutation<T, P extends any[]>(
       Object.assign(mutationState, {
         error: null,
         isPending: true,
-        pendingParams: params as P,
+        pendingParams: params,
         value: null,
       });
     });
 
-    const promise = mutator(...args)
+    const promise = mutator(...params)
       .then((value) => {
         if (abortController.signal.aborted) {
           return value;
