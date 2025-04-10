@@ -1,7 +1,7 @@
 {
-  "name": "bonsify",
-  "version": "0.7.0",
-  "description": "Patterns for well-structured, artfully maintained components and state management.",
+  "name": "mobx-lite",
+  "version": "0.1.8",
+  "description": "Managing state and data in rich client applications",
   "keywords": [
     "state",
     "management",
@@ -45,7 +45,10 @@
     "build:esm": "tsc -p ./tsconfig.build-esm.json",
     "clean": "rimraf ./dist ./dist-babel-plugin ./dist-swc-plugin",
     "test": "vitest",
-    "prepublish": "yarn build"
+    "prepare": "yarn build",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {
     "@types/babel__core": "^7.20.5",
@@ -54,6 +57,7 @@
     "rimraf": "^6.0.1",
     "typescript": "^5.7.3",
     "vite": "^6.1.0",
+    "vitepress": "^1.6.3",
     "vitest": "^3.0.5"
   },
   "dependencies": {
@@ -61,6 +65,8 @@
     "@babel/traverse": "^7.26.7",
     "@babel/types": "^7.26.7",
     "babel-plugin-observing-components": "^0.1.0",
+    "mobx": "^6.13.7",
+    "mobx-react-lite": "^4.1.0",
     "react": "^19.0.0",
     "swc-plugin-observing-components": "^0.1.0"
   },

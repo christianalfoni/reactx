@@ -1,11 +1,11 @@
-# Pattern: Explicit States
+# Explicit states
 
 Explicit states, unions, algebraic data types or finite state machines, the concepts are very similar. The idea is that you define state that is in one of either explicit states.
 
 So instead of writing:
 
 ```ts
-type Session = {
+type SessionState = {
   user: UserDTO | null;
   isAuthenticating: boolean;
   signin(): void;
@@ -44,44 +44,80 @@ Normally a finite state machine is implemented with a dispatcher type of concept
 
 By simply using a pattern we can resolve this:
 
-```ts
-import { reactive } from "bonsify";
+::: code-group
 
-function Counter() {
-  const counter = reactive({
-    state: IDLE(),
+```ts [Functional]
+import { reactive } from "mobx-lite";
+
+function CounterState() {
+  const state = reactive({
+    state: IDLE() as ReturnType<typeof IDLE> | ReturnType<typeof COUNTING>,
     count: 0,
   });
 
-  return counter;
+  return state;
 
   function IDLE() {
     return {
-      current: "IDLE",
+      current: "IDLE" as const,
       start() {
-        counter.state = COUNTING();
+        state.state = COUNTING();
       },
     };
   }
 
   function COUNTING() {
     const interval = setInterval(() => {
-      counter.count++;
+      state.count++;
     }, 1000);
 
     return {
-      current: "COUNTING",
+      current: "COUNTING" as const,
       stop() {
         clearInterval(interval);
-        counter.state = IDLE();
+        state.state = IDLE();
       },
     };
   }
 }
+```
 
-function State() {
-  return {
-    counter: Counter(),
-  };
+```ts [Object Oriented]
+import { reactive } from "mobx-lite";
+
+class IDLE {
+  readonly current = "IDLE";
+  constructor(private counter: CounterState) {
+    reactive(this);
+  }
+  start() {
+    this.counter.state = new COUNTING(this.counter);
+  }
+}
+
+class COUNTING {
+  readonly current = "COUNTING";
+  private interval: number;
+  constructor(private counter: CounterState) {
+    reactive(this);
+    this.interval = setInterval(() => {
+      this.counter.count++;
+    }, 1000);
+  }
+  stop() {
+    clearInterval(this.interval);
+    this.counter.state = new IDLE(this.counter);
+  }
+}
+
+class CounterState {
+  state: IDLE | COUNTING;
+  count = 0;
+  constructor() {
+    reactive(this);
+    this.state = new IDLE(this);
+  }
 }
 ```
+
+:::
