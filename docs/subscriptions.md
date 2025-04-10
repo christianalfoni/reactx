@@ -6,17 +6,17 @@ When you have state that components dynamically access by reading it, you can us
 
 ```ts [Functional]
 function Dashboard(env: Environment) {
-  const dashboard = reactive({
+  const state = reactive({
     statistics: [] as DashboardStatistics[],
     subscribe,
   });
 
-  return dashboard;
+  return state;
 
   function subscribe() {
     const disposeDashboardStatistics =
       env.persistence.subscribeDashboardStatistics((stats) => {
-        dashboard.statistics = stats;
+        state.statistics = stats;
       });
 
     return () => {

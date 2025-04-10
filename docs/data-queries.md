@@ -9,12 +9,12 @@ Data is also state. The difference between data and regular state is that we nee
 ```ts [Functional]
 import { reactive } from "mobx-lite";
 
-function Data() {
-  const data = reactive({
+function TodosState() {
+  const state = reactive({
     todosQuery: reactive.query(fetchTodos),
   });
 
-  return data;
+  return state;
 
   function fetchTodos() {
     return fetch("/todos").then((response) => response.json());
@@ -25,7 +25,7 @@ function Data() {
 ```ts [Object Oriented]
 import { reactive } from "mobx-lite";
 
-class Data {
+class TodosState {
   todosQuery = reactive.query(() => this.fetchTodos());
   constructor() {
     reactive(this);
@@ -87,3 +87,83 @@ The query is **lazy** which means it will only start fetching the initial data w
 Any call to `fetch` or `revalidate` will abort the current pending request, if any.
 
 :::
+
+## Single queries
+
+We often think about collections of data, but we also have single pieces of data that we need to fetch. For example we might allow our application to show a single todo using the id in the url. We handle this by creating a record of queries that we dynamically populate based on the todo we want to query.
+
+::: code-group
+
+```ts [Functional]
+import { reactive } from "mobx-lite";
+
+type Todo = {
+  id: string;
+  title: string;
+  completed: boolean;
+};
+
+function TodosState() {
+  const todoQueries: Record<string, reactive.Query<Todo>> = {};
+  const state = reactive({
+    todosQuery: reactive.query(fetchTodos),
+    queryTodo,
+  });
+
+  return state;
+
+  function fetchTodos(): Promise<Todo[]> {
+    return fetch("/todos").then((response) => response.json());
+  }
+
+  function queryTodo(id: string) {
+    if (!todoQueries[id]) {
+      todoQueries[id] = reactive.query(() => fetchTodo(id));
+    }
+
+    return todoQueries[id];
+  }
+
+  function fetchTodo(id: string): Promise<Todo> {
+    return fetch(`/todos/${id}`).then((response) => response.json());
+  }
+}
+```
+
+```ts [Object Oriented]
+import { reactive } from "mobx-lite";
+
+class TodosState {
+  private todoQueries: Record<string, reactive.Query<Todo>> = {};
+  todosQuery = reactive.query(() => this.fetchTodos());
+  constructor() {
+    reactive(this);
+  }
+  queryTodo(id: string) {
+    if (!this.todoQueries[id]) {
+      this.todoQueries[id] = reactive.query(() => this.fetchTodo(id));
+    }
+
+    return this.todoQueries[id];
+  }
+  private fetchTodos() {
+    return fetch("/todos").then((response) => response.json());
+  }
+  private fetchTodo(id: string): Promise<Todo> {
+    return fetch(`/todos/${id}`).then((response) => response.json());
+  }
+}
+```
+
+:::
+
+You can now query a todo when you render a component:
+
+```tsx
+function Todo({ id }) {
+  const todoQuery = state.todosState.queryTodo(id);
+  const todo = use(todoQuery.promise);
+
+  return <div>{todo.title}</div>;
+}
+```

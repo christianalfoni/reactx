@@ -43,12 +43,12 @@ export default defineConfig({
 
           { text: "Data queries", link: "/data-queries" },
           { text: "Data mutations", link: "/data-mutations" },
+          { text: "Subscriptions", link: "/subscriptions" },
           { text: "Multiple UX", link: "/multiple-ux" },
           {
             text: "Environment dependencies",
             link: "/environment-dependencies",
           },
-          { text: "Subscriptions", link: "/subscriptions" },
         ],
       },
       {
@@ -60,8 +60,10 @@ export default defineConfig({
           },
           {
             text: "reactive.readonly",
-            link: "/api/reactive.readonly",
+            link: "/api/readonly",
           },
+          { text: "reactive.query", link: "/api/query" },
+          { text: "reactive.mutation", link: "/api/mutation" },
         ],
       },
     ],

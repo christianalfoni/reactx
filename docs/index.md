@@ -12,7 +12,7 @@ hero:
       link: /get-started
     - theme: alt
       text: API
-      link: /api
+      link: /api/reactive
 
 features:
   - title: Functional or Object Oriented
