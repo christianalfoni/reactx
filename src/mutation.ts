@@ -41,6 +41,7 @@ type BaseMutation<T, P> =
 
 export type Mutation<T, P extends any[]> = BaseMutation<T, P> & {
   mutate: (...args: P) => Promise<T>;
+  subscribe: () => () => void;
 };
 
 // Implementation that handles both cases
@@ -48,6 +49,7 @@ export function mutation<T, P extends any[]>(
   mutator: (...args: P) => Promise<T>
 ): Mutation<T, P> {
   let internalState: InternalState<T> = { current: "IDLE" };
+  let subscriptionCount = 0;
 
   const mutationState = reactive<Mutation<T, P>>({
     error: null,
@@ -55,13 +57,33 @@ export function mutation<T, P extends any[]>(
     pendingParams: null,
     value: null,
     mutate,
+    subscribe,
   });
 
   return mutationState;
 
+  function subscribe() {
+    subscriptionCount++;
+
+    return () => {
+      subscriptionCount--;
+
+      if (subscriptionCount === 0 && internalState.current !== "IDLE") {
+        internalState.abortController.abort();
+        internalState = { current: "IDLE" };
+        Object.assign(mutationState, {
+          error: null,
+          isPending: false,
+          pendingParams: null,
+          value: null,
+        });
+      }
+    };
+  }
+
   function mutate(...params: P): Promise<T> {
     // Cancel any ongoing request
-    if (internalState.current === "ACTIVE") {
+    if (internalState.current !== "IDLE") {
       internalState.abortController.abort();
     }
 

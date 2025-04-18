@@ -10,15 +10,7 @@ type ActiveInternalState = {
   abortController: AbortController;
 };
 
-type ExpiredInternalState = {
-  current: "EXPIRED";
-  abortController: AbortController;
-};
-
-type InternalState =
-  | ActiveInternalState
-  | IdleInternalState
-  | ExpiredInternalState;
+type InternalState = ActiveInternalState | IdleInternalState;
 
 type BaseQuery<T> = {
   revalidate: () => Promise<T>;
@@ -114,19 +106,21 @@ export function query<T>(fetcher: () => Promise<T>): Query<T> {
   return queryState as Query<T>;
 
   function subscribe() {
-    if (internalState.current === "IDLE") {
-      throw new Error("You can not subscribe to a state is not active");
-    }
-
-    internalState.current = "ACTIVE";
-
     subscriptionCount++;
 
     return () => {
       subscriptionCount--;
 
-      if (subscriptionCount === 0) {
-        internalState.current = "EXPIRED";
+      if (subscriptionCount === 0 && internalState.current !== "IDLE") {
+        internalState.abortController.abort();
+        internalState = { current: "IDLE" };
+        Object.assign(state, {
+          error: null,
+          isFetching: false,
+          promise: null as unknown as SuspensePromise<T>,
+          value: null,
+          isRevalidating: false,
+        });
       }
     };
   }
