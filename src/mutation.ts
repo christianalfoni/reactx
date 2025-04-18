@@ -112,7 +112,6 @@ export function mutation<T, P extends any[]>(
             value,
           });
         });
-        internalState = { current: "IDLE" };
 
         return value;
       })
