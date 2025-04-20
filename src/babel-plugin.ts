@@ -1,5 +1,5 @@
 import observingComponentsPlugin from "babel-plugin-observing-components";
 
-export default function plugin() {
-  return observingComponentsPlugin({ importPath: "mobx-react-lite" });
+export default function plugin({ exclude }: { exclude?: string[] } = {}) {
+  return observingComponentsPlugin({ importPath: "mobx-react-lite", exclude });
 }

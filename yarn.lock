@@ -1300,13 +1300,14 @@ assertion-error@^2.0.1:
   resolved "https://registry.yarnpkg.com/assertion-error/-/assertion-error-2.0.1.tgz#f641a196b335690b1070bf00b6e7593fec190bf7"
   integrity sha512-Izi8RQcffqCeNVgFigKli1ssklIbpHnCYc6AknXGYoB6grJqyeby7jv12JUQgmTAnIDnbck1uxksT4dzN3PWBA==
 
-babel-plugin-observing-components@^0.1.0:
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/babel-plugin-observing-components/-/babel-plugin-observing-components-0.1.0.tgz#0e0c58070c693485e09bdb6f59968f31f0140fe9"
-  integrity sha512-z8h2eszk6j7hQ9jlruN8e+N7x/pnHtEQ2SEPmkFb4RThlxB3JZilP+yJnyGeThEZp2smuU/Ceb/0HDF0jGzWcQ==
+babel-plugin-observing-components@^0.2.0:
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/babel-plugin-observing-components/-/babel-plugin-observing-components-0.2.0.tgz#e44212ba24d53b191e48f5f009ade85b8a9ea1c3"
+  integrity sha512-nlOYLXHgZtTM7ejr6x6CpUE/a7W3xa58ItvHL7EMaTpYa9Jv0mQUnrmlIwpP7djadM32Bqx/RMJRro6ZLlYzGw==
   dependencies:
     "@babel/core" "^7.26.8"
     "@babel/traverse" "^7.26.8"
+    minimatch "^10.0.1"
 
 balanced-match@^1.0.0:
   version "1.0.2"
@@ -1749,7 +1750,7 @@ micromark-util-types@^2.0.0:
   resolved "https://registry.yarnpkg.com/micromark-util-types/-/micromark-util-types-2.0.2.tgz#f00225f5f5a0ebc3254f96c36b6605c4b393908e"
   integrity sha512-Yw0ECSpJoViF1qTU4DC6NwtC4aWGt1EkzaQB8KPPyCRR8z9TWeV0HbEFGTO+ZY1wB22zmxnJqhPyTpOVCpeHTA==
 
-minimatch@^10.0.0:
+minimatch@^10.0.0, minimatch@^10.0.1:
   version "10.0.1"
   resolved "https://registry.yarnpkg.com/minimatch/-/minimatch-10.0.1.tgz#ce0521856b453c86e25f2c4c0d03e6ff7ddc440b"
   integrity sha512-ethXTt3SGGR+95gudmqJ1eNhRO7eGEGIgYA9vnPatK4/etz2MEVDno5GMCibdMTuBMyElzIlgxMna3K94XDIDQ==
@@ -2096,10 +2097,10 @@ superjson@^2.2.1:
   dependencies:
     copy-anything "^3.0.2"
 
-swc-plugin-observing-components@^0.1.0:
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/swc-plugin-observing-components/-/swc-plugin-observing-components-0.1.0.tgz#083c732dbba1ddf660019c8d29a5db32ee460357"
-  integrity sha512-KMsIDD0Q1pA7AHA7l+C1ADaAyfRJigTojz8uREU5tWuZVQYp84u3DrrxLZgZMJI9ak8YT+4YRBJ958ObPjr7Fg==
+swc-plugin-observing-components@^0.2.0:
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/swc-plugin-observing-components/-/swc-plugin-observing-components-0.2.0.tgz#78cb409e5d91037d6a1cbdbb24ffc63c5c7a30a3"
+  integrity sha512-Ah7RktyGpsd5q3fruW3HXElxo8Rezf7tjiyE5Boge0zoYR5qbzYLi+2kNbcUQV4Ao9oZgRRPA57t0VVmnX0BRw==
 
 tabbable@^6.2.0:
   version "6.2.0"

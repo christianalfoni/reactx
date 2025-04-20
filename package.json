@@ -1,6 +1,6 @@
 {
   "name": "mobx-lite",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "Managing state and data in rich client applications",
   "keywords": [
     "state",
@@ -64,11 +64,11 @@
     "@babel/core": "^7.26.7",
     "@babel/traverse": "^7.26.7",
     "@babel/types": "^7.26.7",
-    "babel-plugin-observing-components": "^0.1.0",
+    "babel-plugin-observing-components": "^0.2.0",
     "mobx": "^6.13.7",
     "mobx-react-lite": "^4.1.0",
     "react": "^19.0.0",
-    "swc-plugin-observing-components": "^0.1.0"
+    "swc-plugin-observing-components": "^0.2.0"
   },
   "license": "ISC"
 }
