@@ -1,3 +1,4 @@
+import { _getAdministration, isObservable } from "mobx";
 /**
  * Cache for storing proxies to avoid recreating them for the same target
  * We use separate caches for mutable and readonly proxies
@@ -25,19 +26,42 @@ const mutatingArrayMethods = [
 /**
  * Base proxy handler with common trap implementations for both objects and arrays
  */
-function createBaseProxyHandler() {
+function createBaseProxyHandler(target: any) {
   return {
-    set(target: any) {
+    set() {
       throw new Error(
         `Cannot mutate a readonly ${Array.isArray(target) ? "array" : "object"}`
       );
     },
 
     // Handle property deletion with reactivity
-    deleteProperty(target: any) {
+    deleteProperty() {
       throw new Error(
         `Cannot mutate a readonly ${Array.isArray(target) ? "array" : "object"}`
       );
+    },
+
+    getOwnPropertyDescriptor(_: any, key: any) {
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+
+    getPrototypeOf() {
+      return Reflect.getPrototypeOf(target);
+    },
+
+    // Handle ownKeys trap to allow for iteration and property existence checks
+    ownKeys(): any {
+      return Reflect.ownKeys(target);
+    },
+
+    // Handle has trap to allow for property existence checks
+    has(_: any, key: any) {
+      return Reflect.has(target, key);
+    },
+
+    // Handle isExtensible trap to ensure readonly objects are not extensible
+    isExtensible() {
+      return false;
     },
   };
 }
@@ -46,62 +70,76 @@ function createBaseProxyHandler() {
  * Creates a proxy for an array with reactive behavior
  */
 function createArrayProxy(target: any[]) {
-  const baseHandler = createBaseProxyHandler();
+  const baseHandler = createBaseProxyHandler(target);
 
-  return new Proxy(target, {
-    ...baseHandler,
+  return new Proxy(
+    isObservable(target) ? _getAdministration(target).target_ : target,
+    {
+      ...baseHandler,
 
-    // Enhanced get trap for arrays to handle special array methods
-    get(target: any[], key: string | symbol) {
-      const result = Reflect.get(target, key);
+      // Enhanced get trap for arrays to handle special array methods
+      get(_, key: string | symbol) {
+        const result = Reflect.get(target, key);
 
-      // Return symbols directly
-      if (typeof key === "symbol") {
-        return result;
-      }
+        if (key === PROXY_TARGET) {
+          return target;
+        }
 
-      // Handle mutating array methods
-      if (mutatingArrayMethods.includes(key as string)) {
-        return () => {
-          throw new Error(`Cannot mutate a readonly array`);
-        };
-      }
+        // Return symbols directly
+        if (typeof key === "symbol") {
+          return result;
+        }
 
-      // Recursively create proxies for nested objects
-      return createProxy(result);
-    },
-  });
+        // Handle mutating array methods
+        if (mutatingArrayMethods.includes(key as string)) {
+          return () => {
+            throw new Error(`Cannot mutate a readonly array`);
+          };
+        }
+
+        // Recursively create proxies for nested objects
+        return createProxy(result);
+      },
+    }
+  );
 }
 
 /**
  * Creates a proxy for an object with reactive behavior
  */
 function createObjectProxy(target: object) {
-  const baseHandler = createBaseProxyHandler();
+  const baseHandler = createBaseProxyHandler(target);
 
-  return new Proxy(target, {
-    ...baseHandler,
+  return new Proxy(
+    isObservable(target) ? _getAdministration(target).target_ : target,
+    {
+      ...baseHandler,
 
-    // Enhanced get trap for objects
-    get(target: any, key: string | symbol) {
-      const result = Reflect.get(target, key);
+      // Enhanced get trap for objects
+      get(_: any, key: string | symbol) {
+        const result = Reflect.get(target, key);
 
-      // Return symbols, functions, and promises directly
-      if (typeof key === "symbol" || typeof result === "function") {
-        return result;
-      }
+        if (key === PROXY_TARGET) {
+          return target;
+        }
 
-      // Handle non-configurable properties
-      const descriptor = Object.getOwnPropertyDescriptor(target, key);
+        // Return symbols, functions, and promises directly
+        if (typeof key === "symbol" || typeof result === "function") {
+          return result;
+        }
 
-      if (descriptor && !descriptor.configurable) {
-        return result;
-      }
+        // Handle non-configurable properties
+        const descriptor = Object.getOwnPropertyDescriptor(target, key);
 
-      // Recursively create proxies for nested objects
-      return createProxy(result);
-    },
-  });
+        if (descriptor && !descriptor.configurable) {
+          return result;
+        }
+
+        // Recursively create proxies for nested objects
+        return createProxy(result);
+      },
+    }
+  );
 }
 
 export function createProxy<T>(target: T): T {
@@ -114,21 +152,22 @@ export function createProxy<T>(target: T): T {
     return target;
   }
 
-  // We've already checked for primitives in the public function
+  // @ts-ignore
+  const unwrappedTarget = target[PROXY_TARGET] || target;
 
-  const cachedProxy = proxyCache.get(target);
+  const cachedProxy = proxyCache.get(unwrappedTarget);
 
   if (cachedProxy) {
     return cachedProxy;
   }
 
   // Create appropriate proxy based on target type
-  const proxy = Array.isArray(target)
-    ? createArrayProxy(target)
-    : createObjectProxy(target);
+  const proxy = Array.isArray(unwrappedTarget)
+    ? createArrayProxy(unwrappedTarget)
+    : createObjectProxy(unwrappedTarget);
 
   // Cache the proxy for future reuse
-  proxyCache.set(target, proxy);
+  proxyCache.set(unwrappedTarget, proxy);
 
   return proxy;
 }

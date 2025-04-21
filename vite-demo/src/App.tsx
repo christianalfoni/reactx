@@ -5,6 +5,9 @@ import { Todos } from "./todos";
 
 const todos = Todos();
 
+console.log(todos);
+console.log(todos.test);
+
 function App() {
   const [newTodo, setNewTodo] = useState("");
   const { error, isFetching, value, revalidate, fetch, subscribe } =

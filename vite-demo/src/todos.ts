@@ -1,4 +1,4 @@
-import { reactive } from "mobx-reactive";
+import { reactive } from "mobx-lite";
 
 let nextTodosData = ["Learn React", "Learn MobX", "Learn Vite"];
 
