@@ -116,7 +116,7 @@ export function query<T>(fetcher: () => Promise<T>): Query<T> {
         internalState = { current: "IDLE" };
         Object.assign(state, {
           error: null,
-          isFetching: false,
+          isFetching: true,
           promise: null as unknown as SuspensePromise<T>,
           value: null,
           isRevalidating: false,
