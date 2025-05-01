@@ -1,8 +1,14 @@
 import { transaction } from "mobx";
 import { reactive } from ".";
 
-type IdleInternalState = {
+type BlockingPromise<T> = {
+  promise: Promise<T>;
+  resolve: (value: Promise<T>) => void;
+};
+
+type IdleInternalState<T> = {
   current: "IDLE";
+  blockingPromise: BlockingPromise<T>;
 };
 
 type ActiveInternalState = {
@@ -10,7 +16,7 @@ type ActiveInternalState = {
   abortController: AbortController;
 };
 
-type InternalState = ActiveInternalState | IdleInternalState;
+type InternalState<T> = ActiveInternalState | IdleInternalState<T>;
 
 type BaseQuery<T> = {
   revalidate: () => Promise<T>;
@@ -50,50 +56,68 @@ export type QueryState<T> =
 
 export type Query<T> = BaseQuery<T> & QueryState<T>;
 
+// We need to use a blocking promise for the initial fetch, as we can
+// not change the state during render. It will be resolved when the
+// query is accessed during IDLE
+function createBlockingPromise<T>() {
+  let resolve!: (value: Promise<T>) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+
+  return {
+    promise,
+    resolve,
+  };
+}
+
 export function query<T>(fetcher: () => Promise<T>): Query<T> {
   let subscriptionCount = 0;
-  let internalState: InternalState = { current: "IDLE" };
+  let internalState: InternalState<T> = {
+    current: "IDLE",
+    blockingPromise: createBlockingPromise(),
+  };
   const state = reactive<QueryState<T>>({
     error: null,
     value: null,
     isRevalidating: false,
     isFetching: true,
-    // This will be set when any of the state is accessed
-    promise: null as unknown as SuspensePromise<T>,
+    // We set a pending blocking promise as we can not set state during render
+    promise: createPendingPromise(internalState.blockingPromise.promise),
   });
 
   const queryState = reactive({
     get error() {
       if (internalState.current !== "ACTIVE") {
-        fetch();
+        internalState.blockingPromise.resolve(executeQuery());
       }
 
       return state.error;
     },
     get value() {
       if (internalState.current !== "ACTIVE") {
-        fetch();
+        internalState.blockingPromise.resolve(executeQuery());
       }
 
       return state.value;
     },
     get isFetching() {
       if (internalState.current !== "ACTIVE") {
-        fetch();
+        internalState.blockingPromise.resolve(executeQuery());
       }
 
       return state.isFetching;
     },
     get isRevalidating() {
       if (internalState.current !== "ACTIVE") {
-        fetch();
+        internalState.blockingPromise.resolve(executeQuery());
       }
 
       return state.isRevalidating;
     },
     get promise() {
       if (internalState.current !== "ACTIVE") {
-        fetch();
+        internalState.blockingPromise.resolve(executeQuery());
       }
 
       return state.promise;
@@ -105,6 +129,22 @@ export function query<T>(fetcher: () => Promise<T>): Query<T> {
 
   return queryState as Query<T>;
 
+  function fetch() {
+    const promise = executeQuery();
+
+    transaction(() => {
+      Object.assign(state, {
+        isFetching: true,
+        isRevalidating: false,
+        promise,
+        value: null,
+        error: null,
+      });
+    });
+
+    return promise;
+  }
+
   function subscribe() {
     subscriptionCount++;
 
@@ -113,11 +153,14 @@ export function query<T>(fetcher: () => Promise<T>): Query<T> {
 
       if (subscriptionCount === 0 && internalState.current !== "IDLE") {
         internalState.abortController.abort();
-        internalState = { current: "IDLE" };
+        internalState = {
+          current: "IDLE",
+          blockingPromise: createBlockingPromise(),
+        };
         Object.assign(state, {
           error: null,
           isFetching: true,
-          promise: null as unknown as SuspensePromise<T>,
+          promise: createPendingPromise(internalState.blockingPromise.promise),
           value: null,
           isRevalidating: false,
         });
@@ -171,24 +214,13 @@ export function query<T>(fetcher: () => Promise<T>): Query<T> {
     return observablePromise;
   }
 
-  function fetch() {
-    const promise = executeQuery();
-
-    transaction(() => {
-      Object.assign(state, {
-        isFetching: true,
-        isRevalidating: false,
-        promise,
-        value: null,
-      });
-    });
-
-    return promise;
-  }
-
   function revalidate(): Promise<T> {
     if (internalState.current !== "ACTIVE") {
-      return fetch();
+      const promise = executeQuery();
+
+      internalState.blockingPromise.resolve(promise);
+
+      return state.promise;
     }
 
     return executeQuery();
