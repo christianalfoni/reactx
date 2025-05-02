@@ -3,6 +3,8 @@ import * as query from "./query";
 import * as mutation from "./mutation";
 import { readonly } from "./readonly";
 
+export { observer } from "mobx-react-lite";
+
 configure({
   enforceActions: "never",
 });
