@@ -16,22 +16,28 @@ import { reactive } from "mobx-lite";
 
 const reactiveCounter = reactive(new CounterState());
 
-render(<App state={reactiveCounter} />);
+render(<Counter counter={reactiveCounter} />);
 ```
 
 `reactive` does not only make your state reactive, it:
 
-- Lazily makes classes reactive when accessed by React
+- Lazily makes properties reactive when accessed by React
 - Prevents any mutations happening from React
 - All class methods called from React are bound to the class instance
 
 ```tsx
-function Counter() {
+function Counter({ counter }) {
   return (
     <div>
       <span>{counter.count}</span>
-      <button onClick={() => counter.increase()}>Increase</button>
+      <button onClick={counter.increase}>Increase</button>
     </div>
   );
 }
 ```
+
+::: info
+
+Since React can only "reactify" properties that is publicly available you can use `private` keyword in your classes to hide properties from React and thus becoming reactive.
+
+:::

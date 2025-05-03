@@ -8,7 +8,7 @@ Despite the evolution of the ecosystem, MobX remains a battle-tested and excepti
 
 ## Truly transparent
 
-Traditionally with Mobx you have to use decorators or functions to configure the reactivity of your state management. With **Mobx Lite** we flip this around and let React tell your state management what needs to be reactive. With the automatic observation of components there is only one single place in your code that you see `reactive`, where you expose your state management to React.
+Traditionally with Mobx you have to use decorators or functions to configure the reactivity of your state management. With **Mobx Lite** we flip this around and let React tell your state management what needs to be reactive. With the automatic observation of components there is only one single place in your code that you see reference to the reactive system... where you expose your state to React using `reactive`.
 
 ## No actions
 
