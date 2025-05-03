@@ -4,53 +4,17 @@ Another aspect of data is mutations. Even though mutations also represents a req
 
 An important aspect of performing mutations is showing optimistic data.
 
-::: code-group
+```ts
+import { query, mutation } from "mobx-lite";
 
-```ts [Functional]
-function TodosState() {
-  const state = reactive({
-    todosQuery: reactive.query(fetchTodos),
-    addTodoMutation: reactive.mutation(addTodo),
-  });
-
-  return state;
-
-  function fetchTodos() {
-    return fetch("/todos").then((response) => response.json());
-  }
-
-  function addTodo(title: string) {
-    await fetch("/todos", {
-      method: "POST",
-      body: JSON.stringify({ title, completed: false }),
-    });
-
-    await state.todosQuery.revalidate();
-  }
-}
-```
-
-```ts [Object Oriented]
 class Data {
-  todosQuery = reactive.query(() => this.fetchTodos());
-  addTodoMutation = reactive.mutation((title: string) => this.addTodo(title));
-  constructor() {
-    reactive(this);
-  }
-  private fetchTodos() {
-    return fetch("/todos").then((response) => response.json());
-  }
-  private async addTodo(title: string) {
-    await fetch("/todos", {
-      method: "POST",
-      body: JSON.stringify({ title, completed: false }),
-    });
+  todosQuery = query(() => fetchJson("/todos"));
+  addTodoMutation = mutation((title: string) => {
+    await postJson("/todos", { title, completed: false });
     await this.todosQuery.revalidate();
-  }
+  });
 }
 ```
-
-:::
 
 The mutation has a `mutate` method to call the mutation, but it also exposes the state of the mutation itself.
 

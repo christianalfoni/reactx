@@ -15,10 +15,10 @@ hero:
       link: /api/reactive
 
 features:
-  - title: Functional or Object Oriented
-    details: Choose your paradigm. Write state management more like you express components or use traditional classes
-  - title: Simple
-    details: A single primitive, transparent observation and patterns that help you organise and structure your state management
+  - title: Transparent reactivity
+    details: Mobx Lite is completely transparent. No makeAutoObservable for every class or observer for every component, only expose your external state as reactive to React
+  - title: Data Management
+    details: Utilities to effectively manage data in your state layer and consume it in React
   - title: Clear mental model
     details: Untangle state management from your components and get a clear separation of state and deriving a UI from that state
 ---

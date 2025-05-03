@@ -1,8 +1,23 @@
-import { _getAdministration, isObservable } from "mobx";
-/**
- * Cache for storing proxies to avoid recreating them for the same target
- * We use separate caches for mutable and readonly proxies
- */
+import { _getAdministration, computed, isObservable, observable } from "mobx";
+
+function isCustomClassInstance(obj: unknown) {
+  if (obj === null || typeof obj !== "object") return false;
+
+  const ctor = obj.constructor;
+  // no constructor → probably Object.create(null)
+  if (typeof ctor !== "function") return false;
+
+  const src = Function.prototype.toString.call(ctor);
+
+  // 1) Exclude plain Object/Array/etc by native-code check
+  if (src.includes("[native code]")) return false;
+
+  // 2) Also ignore plain Object if someone subclassed Object without new syntax
+  if (ctor === Object) return false;
+
+  return true;
+}
+
 const proxyCache = new WeakMap<any, any>();
 
 /**
@@ -109,13 +124,13 @@ function createArrayProxy(target: any[]) {
  */
 function createObjectProxy(target: object) {
   const baseHandler = createBaseProxyHandler(target);
+  const isCustomClass = isCustomClassInstance(target);
 
-  return new Proxy(
-    isObservable(target) ? _getAdministration(target).target_ : target,
-    {
+  if (isCustomClass) {
+    const observedKeys = new Set<string>();
+
+    return new Proxy(target, {
       ...baseHandler,
-
-      // Enhanced get trap for objects
       get(_: any, key: string | symbol) {
         const result = Reflect.get(target, key);
 
@@ -123,23 +138,100 @@ function createObjectProxy(target: object) {
           return target;
         }
 
-        // Return symbols, functions, and promises directly
-        if (typeof key === "symbol" || typeof result === "function") {
+        if (typeof key === "symbol") {
           return result;
         }
 
-        // Handle non-configurable properties
-        const descriptor = Object.getOwnPropertyDescriptor(target, key);
+        if (typeof result === "function") {
+          return result.bind(target);
+        }
 
-        if (descriptor && !descriptor.configurable) {
-          return result;
+        if (isCustomClass && !observedKeys.has(key)) {
+          const getter = Object.getOwnPropertyDescriptor(
+            Object.getPrototypeOf(target),
+            key
+          )?.get;
+
+          observedKeys.add(key);
+
+          if (getter) {
+            const computedValue = computed(getter.bind(createProxy(target)));
+
+            Object.defineProperty(target, key, {
+              configurable: true,
+              enumerable: true,
+              get() {
+                return computedValue.get();
+              },
+            });
+
+            return computedValue.get();
+          } else {
+            const boxedValue = observable.box(result);
+
+            Object.defineProperty(target, key, {
+              configurable: true,
+              enumerable: true,
+              get() {
+                return boxedValue.get();
+              },
+              set(v) {
+                boxedValue.set(v);
+              },
+            });
+
+            return createProxy(boxedValue.get());
+          }
         }
 
         // Recursively create proxies for nested objects
         return createProxy(result);
       },
-    }
-  );
+    });
+  }
+
+  return new Proxy(target, {
+    ...baseHandler,
+
+    // Enhanced get trap for objects
+    get(_: any, key: string | symbol) {
+      const result = Reflect.get(target, key);
+
+      if (key === PROXY_TARGET) {
+        return target;
+      }
+
+      if (typeof key === "symbol") {
+        return result;
+      }
+
+      if (typeof result === "function") {
+        return result.bind(target);
+      }
+
+      const propertyDescriptor = Object.getOwnPropertyDescriptor(target, key);
+
+      if (isCustomClass && !propertyDescriptor?.get) {
+        const boxedValue = observable.box(result);
+
+        Object.defineProperty(target, key, {
+          configurable: true,
+          enumerable: true,
+          get() {
+            return boxedValue.get();
+          },
+          set(v) {
+            boxedValue.set(v);
+          },
+        });
+
+        return createProxy(boxedValue.get());
+      }
+
+      // Recursively create proxies for nested objects
+      return createProxy(result);
+    },
+  });
 }
 
 export function createProxy<T>(target: T): T {
@@ -172,6 +264,6 @@ export function createProxy<T>(target: T): T {
   return proxy;
 }
 
-export function readonly<T extends Record<string, any>>(value: T): T {
+export function reactive<T extends Record<string, any>>(value: T): T {
   return createProxy(value);
 }
