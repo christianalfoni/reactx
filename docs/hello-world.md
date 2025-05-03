@@ -16,7 +16,7 @@ function Counter() {
   return (
     <div>
       <span>{counter.count}</span>
-      <button onClick={() => counter.increase()}>Increase</button>
+      <button onClick={counter.increase}>Increase</button>
     </div>
   );
 }

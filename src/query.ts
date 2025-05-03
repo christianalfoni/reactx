@@ -1,5 +1,4 @@
-import { transaction } from "mobx";
-import { reactive } from ".";
+import { observable, transaction } from "mobx";
 
 type BlockingPromise<T> = {
   promise: Promise<T>;
@@ -77,7 +76,7 @@ export function query<T>(fetcher: () => Promise<T>): Query<T> {
     current: "IDLE",
     blockingPromise: createBlockingPromise(),
   };
-  const state = reactive<QueryState<T>>({
+  const state = observable<QueryState<T>>({
     error: null,
     value: null,
     isRevalidating: false,
@@ -86,7 +85,7 @@ export function query<T>(fetcher: () => Promise<T>): Query<T> {
     promise: createPendingPromise(internalState.blockingPromise.promise),
   });
 
-  const queryState = reactive({
+  const queryState = observable({
     get error() {
       if (internalState.current !== "ACTIVE") {
         internalState.blockingPromise.resolve(executeQuery());
@@ -157,6 +156,7 @@ export function query<T>(fetcher: () => Promise<T>): Query<T> {
           current: "IDLE",
           blockingPromise: createBlockingPromise(),
         };
+
         Object.assign(state, {
           error: null,
           isFetching: true,

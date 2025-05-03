@@ -1,5 +1,4 @@
-import { transaction } from "mobx";
-import { reactive } from ".";
+import { observable, transaction } from "mobx";
 
 type IdleInternalState<T> = {
   current: "IDLE";
@@ -51,7 +50,7 @@ export function mutation<T, P extends any[]>(
   let internalState: InternalState<T> = { current: "IDLE" };
   let subscriptionCount = 0;
 
-  const mutationState = reactive<Mutation<T, P>>({
+  const mutationState = observable<Mutation<T, P>>({
     error: null,
     isPending: false,
     pendingParams: null,

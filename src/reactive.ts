@@ -128,6 +128,7 @@ function createObjectProxy(target: object) {
 
   if (isCustomClass) {
     const observedKeys = new Set<string>();
+    const boundMethods: Record<string, Function> = {};
 
     return new Proxy(target, {
       ...baseHandler,
@@ -143,10 +144,10 @@ function createObjectProxy(target: object) {
         }
 
         if (typeof result === "function") {
-          return result.bind(target);
+          return (boundMethods[key] = boundMethods[key] || result.bind(target));
         }
 
-        if (isCustomClass && !observedKeys.has(key)) {
+        if (!observedKeys.has(key)) {
           const getter = Object.getOwnPropertyDescriptor(
             Object.getPrototypeOf(target),
             key
@@ -201,31 +202,8 @@ function createObjectProxy(target: object) {
         return target;
       }
 
-      if (typeof key === "symbol") {
+      if (typeof key === "symbol" || typeof result === "function") {
         return result;
-      }
-
-      if (typeof result === "function") {
-        return result.bind(target);
-      }
-
-      const propertyDescriptor = Object.getOwnPropertyDescriptor(target, key);
-
-      if (isCustomClass && !propertyDescriptor?.get) {
-        const boxedValue = observable.box(result);
-
-        Object.defineProperty(target, key, {
-          configurable: true,
-          enumerable: true,
-          get() {
-            return boxedValue.get();
-          },
-          set(v) {
-            boxedValue.set(v);
-          },
-        });
-
-        return createProxy(boxedValue.get());
       }
 
       // Recursively create proxies for nested objects

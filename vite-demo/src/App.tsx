@@ -1,18 +1,17 @@
+import { reactive } from "mobx-lite";
 import "./App.css";
 
-import { Suspense, use, useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Todos } from "./todos";
 
-const todos = Todos();
-
-console.log(todos);
-console.log(todos.test);
+const todos = reactive(new Todos());
 
 function App() {
   const [newTodo, setNewTodo] = useState("");
   const { error, isFetching, value, revalidate, fetch, subscribe } =
     todos.query;
   const { mutate: addTodo, pendingParams: pendingTodo } = todos.add;
+  const { mutate: removeTodo } = todos.remove;
 
   useEffect(subscribe, [subscribe]);
 
@@ -36,15 +35,15 @@ function App() {
         onChange={(event) => setNewTodo(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === "Enter") {
-            addTodo({ title: newTodo });
+            addTodo(newTodo);
             setNewTodo("");
           }
         }}
       />
       <ul>
-        {pendingTodo && <li>Adding {pendingTodo.title}...</li>}
+        {pendingTodo && <li>Adding {pendingTodo[0]}...</li>}
         {value.map((todo) => (
-          <li key={todo} onClick={() => todos.remove(todo)}>
+          <li key={todo} onClick={() => removeTodo(todo)}>
             {todo}
           </li>
         ))}
