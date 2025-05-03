@@ -1,12 +1,14 @@
-# reactive.mutation
+# mutation
 
 ```ts
-const mutation = reactive.mutation((title: string) => {
-  return fetch("/todos", {
-    method: "POST",
-    body: JSON.stringify({ title, completed: false }),
-  });
-});
+class Data {
+  addTodoMutation = mutation((title: string) =>
+    postJson("/todos", {
+      title,
+      completed: false,
+    })
+  );
+}
 ```
 
 Returns a `mutation` object that you can use to track the state of the mutation in a component or in your state management. The following properties are available:

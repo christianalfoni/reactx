@@ -1,7 +1,11 @@
-# reactive.query
+# query
 
 ```ts
-const query = reactive.query(() => fetch("/todos").then((res) => res.json()));
+import { query } from "mobx-lite";
+
+class Data {
+  todosQuery = query(() => fetchJson("/todos"));
+}
 ```
 
 Returns a `query` object that you can use to track the state of the query in a component or in your state management. The following properties are available:

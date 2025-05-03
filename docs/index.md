@@ -16,9 +16,9 @@ hero:
 
 features:
   - title: Transparent reactivity
-    details: Mobx Lite is completely transparent. No makeAutoObservable for every class or observer for every component, only expose your external state as reactive to React
+    details: No makeAutoObservable for every class or observer for every component
+  - title: Transparent protection
+    details: No actions or flows, but still prevent React from making direct state changes
   - title: Data Management
-    details: Utilities to effectively manage data in your state layer and consume it in React
-  - title: Clear mental model
-    details: Untangle state management from your components and get a clear separation of state and deriving a UI from that state
+    details: Query and mutation utilities for modern data management with React
 ---

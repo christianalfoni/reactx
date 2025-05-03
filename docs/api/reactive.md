@@ -1,29 +1,10 @@
 # reactive
 
-::: code-group
-
-```ts [Functional]
-import { reactive } from "mobx-lite";
-
-const state = reactive({
-  count: 0,
-  get computedDouble() {
-    return state.count * 2;
-  },
-  increase() {
-    state.count++;
-  },
-});
-```
-
-```ts [Object Oriented]
+```ts
 import { reactive } from "mobx-lite";
 
 class State {
   count = 0;
-  constructor() {
-    reactive(this);
-  }
   get computedDouble() {
     return this.count * 2;
   }
@@ -31,8 +12,8 @@ class State {
     this.count++;
   }
 }
+
+const reactiveState = reactive(new State());
 ```
 
-:::
-
-Creates observable state, where `getters` becomes computed properties that are cached as long as they are observed.
+Makes your state a reactive proxy where access to properties lazily makes the state reactive, methods are bound to the class instance and any mutations are protected.
