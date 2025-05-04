@@ -15,10 +15,10 @@ hero:
       link: /api/reactive
 
 features:
+  - title: Two paradigms
+    details: Apply the best paradigm for the job, use classes for state management and functions for UI
   - title: Transparent reactivity
-    details: No makeAutoObservable for every class or observer for every component
-  - title: Transparent protection
-    details: No actions or flows, but still prevent React from making direct state changes
+    details: Just use classes, just use components, no special hooks, primitives or other abstractions
   - title: Data Management
     details: Query and mutation utilities for modern data management with React
 ---

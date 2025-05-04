@@ -21,3 +21,5 @@ function Counter() {
   );
 }
 ```
+
+`reactive` is only called once, when providing your root state to React, however you choose to expose it. React will then enhance your state management to be become reactive where it needs it to be, without being able to mutate state directly.

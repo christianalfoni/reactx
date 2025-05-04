@@ -16,8 +16,8 @@ export default defineConfig({
         items: [
           { text: "Get Started", link: "/get-started" },
           { text: "Hello World", link: "/hello-world" },
-          { text: "Mental Model", link: "/mental-model" },
           { text: "Reimagined", link: "/reimagined" },
+          { text: "Mental Model", link: "/mental-model" },
         ],
       },
       {
