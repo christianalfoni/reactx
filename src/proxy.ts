@@ -85,7 +85,7 @@ function createObjectProxy(target: object) {
         }
 
         if (observedKeys.has(key)) {
-          return Reflect.get(target, key);
+          return createProxy(Reflect.get(target, key));
         }
 
         const getter = Object.getOwnPropertyDescriptor(
@@ -128,7 +128,9 @@ function createObjectProxy(target: object) {
           },
         });
 
-        return createProxy(boxedValue.get());
+        const value = createProxy(boxedValue.get());
+
+        return value;
       },
     });
   }

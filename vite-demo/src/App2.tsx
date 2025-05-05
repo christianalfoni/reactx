@@ -1,4 +1,4 @@
-import { reactive } from "mobx-lite";
+import { reactive, immutableReactive } from "mobx-lite";
 
 class Test {
   todos: string[] = [];
@@ -14,7 +14,7 @@ class TodosState {
   }
 }
 
-const todosState = reactive(new TodosState(), true);
+const todosState = immutableReactive(new TodosState());
 
 export default function App2() {
   return (
