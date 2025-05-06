@@ -68,14 +68,14 @@ We often think about collections of data, but we also have single pieces of data
 import { query, Query } from "mobx-lite";
 
 class TodosState {
-  #todoQueries: Record<string, Query<Todo>> = {};
+  private todoQueries: Record<string, Query<Todo>> = {};
   todosQuery = query(() => fetchJson("/todos"));
   queryTodo(id: string) {
-    if (!this.#todoQueries[id]) {
-      this.#todoQueries[id] = query(() => fetchJson(`/todos/${id}`));
+    if (!this.todoQueries[id]) {
+      this.todoQueries[id] = query(() => fetchJson(`/todos/${id}`));
     }
 
-    return this.#todoQueries[id];
+    return this.todoQueries[id];
   }
 }
 ```
@@ -90,3 +90,20 @@ function Todo({ id }) {
   return <div>{todo.title}</div>;
 }
 ```
+
+## Invalidating queries
+
+Often you want to invalidate a query when a component is no longer consuming the query. Since multiple components might look at the same data we need to ensure we do not invalidate until all components have unmounted. We handle this by subscribing to the query.
+
+```tsx
+function Todo({ id }) {
+  const todoQuery = state.todosState.queryTodo(id);
+  const todo = use(todoQuery.promise);
+
+  useEffect(todoQuery.subscribe, []);
+
+  return <div>{todo.title}</div>;
+}
+```
+
+When the component unmounts and no other components are consuming the query, it will be invalidated and cause a new fetch the next time it is consumed.

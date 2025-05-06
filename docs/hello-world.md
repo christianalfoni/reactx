@@ -10,6 +10,7 @@ class CounterState {
   }
 }
 
+// Expose state to React with `reactive`
 const counter = reactive(new CounterState());
 
 function Counter() {
@@ -22,4 +23,8 @@ function Counter() {
 }
 ```
 
-`reactive` is only called once, when providing your root state to React, however you choose to expose it. React will then enhance your state management to be become reactive where it needs it to be, without being able to mutate state directly.
+`reactive` is only when providing your root state to React, however you choose to expose it. It will:
+
+- Lazily enhance your state management to be reactive, where needed
+- Prevent direct state mutation from React
+- Bind methods accessed to the class instance

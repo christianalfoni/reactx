@@ -4,8 +4,8 @@ When you have state that components dynamically access by reading it, you can us
 
 ```ts
 class Dashboard {
-  constructor(private env: Environment) {}
   statistics: DashboardStatistics[] = [];
+  constructor(private env: Environment) {}
   subscribe() {
     const disposeDashboardStatistics =
       this.env.persistence.subscribeDashboardStatistics((stats) => {
@@ -19,9 +19,12 @@ class Dashboard {
 }
 
 class State {
-  constructor(private env: Environment) {}
-  dashboard = new Dashboard(this.env);
-  settings = new Settings(this.env);
+  dashboard: Dashboard;
+  settings: Settings;
+  constructor(env: Environment) {
+    this.dashboard = new Dashboard(env);
+    this.settings = new Settings(env);
+  }
 }
 ```
 

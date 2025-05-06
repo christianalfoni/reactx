@@ -15,10 +15,10 @@ hero:
       link: /api/reactive
 
 features:
-  - title: Two paradigms
-    details: Apply the best paradigm for the job, use classes for state management and functions for UI
+  - title: Best of both worlds
+    details: Object oriented state management with functional UI components
   - title: Transparent reactivity
-    details: Just use classes, just use components, no special hooks, primitives or other abstractions
+    details: Just write state management and UI code, free from reactivity boilerplate
   - title: Data Management
     details: Query and mutation utilities for modern data management with React
 ---
