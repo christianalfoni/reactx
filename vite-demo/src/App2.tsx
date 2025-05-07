@@ -1,23 +1,32 @@
-import { reactive, immutableReactive } from "mobx-lite";
+import { reactive } from "mobx-lite";
 
 class Test {
-  todos: string[] = [];
-}
-
-class TodosState {
-  private test: Test = new Test();
-  addTodo(title: string) {
-    this.test.todos = [...this.test.todos, title];
-  }
-  get count() {
-    return this.test.todos.length;
+  count = 0;
+  constructor(private counter: Counter) {}
+  increase() {
+    this.counter.count++;
   }
 }
 
-const todosState = immutableReactive(new TodosState());
+class Counter {
+  count = 0;
+  test = new Test(this);
+  increase() {
+    this.count++;
+  }
+}
+
+const todosState = reactive(new Counter());
 
 export default function App2() {
   return (
-    <h1 onClick={() => todosState.addTodo("test")}>App2 {todosState.count}</h1>
+    <h1
+      onClick={() => {
+        //   todosState.increase();
+        todosState.test.increase();
+      }}
+    >
+      App2 {todosState.count} {todosState.test.count}
+    </h1>
   );
 }
