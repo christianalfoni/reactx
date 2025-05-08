@@ -119,21 +119,65 @@ function createActionProxy(
         },
       });
       const result = Reflect.apply(func, proxy, args);
-      devtool.send({
-        type: "operator:end",
-        data: {
-          actionId,
-          executionId,
-          operatorId: executionId,
-        },
-      });
-      devtool.send({
-        type: "action:end",
-        data: {
-          actionId,
-          executionId,
-        },
-      });
+
+      if (result instanceof Promise) {
+        result
+          .then(() => {
+            devtool.send({
+              type: "operator:end",
+              data: {
+                actionId,
+                executionId,
+                operatorId: executionId,
+                isAsync: true,
+              },
+            });
+            devtool.send({
+              type: "action:end",
+              data: {
+                actionId,
+                executionId,
+              },
+            });
+          })
+          .catch((error) => {
+            devtool.send({
+              type: "operator:end",
+              data: {
+                actionId,
+                executionId,
+                operatorId: executionId,
+                isAsync: true,
+                error,
+              },
+            });
+            devtool.send({
+              type: "action:end",
+              data: {
+                actionId,
+                executionId,
+              },
+            });
+          });
+      } else {
+        devtool.send({
+          type: "operator:end",
+          data: {
+            actionId,
+            executionId,
+            operatorId: executionId,
+            isAsync: false,
+          },
+        });
+        devtool.send({
+          type: "action:end",
+          data: {
+            actionId,
+            executionId,
+          },
+        });
+      }
+
       return result;
     },
   });
@@ -269,6 +313,7 @@ function createObjectProxy(target: object, path: string[]) {
         const value = createProxy(boxedValue.get(), path.concat(key));
 
         autorun(() => {
+          console.log("State", path.concat(key), boxedValue.get());
           devtool.send({
             type: "state",
             data: {

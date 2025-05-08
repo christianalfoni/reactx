@@ -59,8 +59,6 @@ export class Devtools {
     this.ws.onclose = () => {
       this.isConnected = false;
 
-      console.log("WTF!?!?");
-
       if (this.doReconnect && !this.hasWarnedReconnect) {
         console.warn(
           "Debugger application is not running on selected port... will reconnect automatically behind the scenes"
@@ -128,15 +126,11 @@ export class Devtools {
             }
           }
 
-          if (safeClassNames.has(value.constructor.name)) {
-            return {
-              __CLASS__: true,
-              name: value.constructor.name,
-              value,
-            };
-          } else {
-            return `[${value.constructor.name || "NOT SERIALIZABLE"}]`;
-          }
+          return {
+            __CLASS__: true,
+            name: value.constructor.name,
+            value: {},
+          };
         }
 
         return value;

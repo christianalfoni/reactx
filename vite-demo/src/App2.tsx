@@ -3,8 +3,9 @@ import { reactive } from "mobx-lite";
 class Test {
   count = 0;
   constructor(private counter: Counter) {}
-  increase() {
-    this.counter.count++;
+  async increase() {
+    this.count++;
+    this.counter.increase();
   }
 }
 
