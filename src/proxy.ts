@@ -425,8 +425,9 @@ function createObjectProxy(target: object, path: string[]) {
 
         autorun(() => {
           const val = boxedValue.get();
-          console.log("State", path.concat(key), val);
 
+          // We do not update the actual class instance more than once or it will
+          // overwrite existing state in the devtools
           if (!isFirstUpdate && isCustomClassInstance(val)) {
             return;
           }
