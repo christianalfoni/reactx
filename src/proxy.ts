@@ -421,13 +421,23 @@ function createObjectProxy(target: object, path: string[]) {
 
         const value = createProxy(boxedValue.get(), path.concat(key));
 
+        let isFirstUpdate = true;
+
         autorun(() => {
-          console.log("State", path.concat(key), boxedValue.get());
+          const val = boxedValue.get();
+          console.log("State", path.concat(key), val);
+
+          if (!isFirstUpdate && isCustomClassInstance(val)) {
+            return;
+          }
+
+          isFirstUpdate = false;
+
           devtool.send({
             type: "state",
             data: {
               path: path.concat(key),
-              value: boxedValue.get(),
+              value: val,
             },
           });
         });
