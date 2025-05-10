@@ -1,5 +1,11 @@
 import { reactive } from "mobx-lite";
 
+class Effects {
+  foo() {
+    return "bar";
+  }
+}
+
 class Test {
   count = 0;
   constructor(private counter: Counter) {}
@@ -10,10 +16,12 @@ class Test {
 }
 
 class Counter {
+  private effects = new Effects();
   count = 0;
   test = new Test(this);
   increase() {
     this.count++;
+    this.effects.foo();
   }
 }
 

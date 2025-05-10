@@ -81,22 +81,67 @@ function createArrayProxy(target: any[], path: string[]) {
   );
 }
 
+let currentEffectId = 0;
+
+function createEffectsProxy(
+  target: any,
+  path: string[],
+  execution: { actionId: string; executionId: string; operatorId: number }
+) {
+  return new Proxy(target, {
+    get(_, key) {
+      const effectId = currentEffectId++;
+      const result = Reflect.get(target, key);
+
+      if (typeof result === "function") {
+        return (...args: any[]) => {
+          const funcResult = result.call(target, ...args);
+
+          devtool.send({
+            type: "effect",
+            data: {
+              effectId,
+              actionId: execution.actionId,
+              executionId: execution.executionId,
+              operatorId: execution.operatorId,
+              method: key,
+              args,
+              name: path.join("."),
+              result: funcResult,
+              isPending: false,
+              error: null,
+            },
+          });
+
+          return funcResult;
+        };
+      }
+    },
+  });
+}
+
+let currentActionId = 0;
+
 function createActionProxy(
   target: any,
   key: string,
   func: Function,
-  path: string[]
+  path: string[],
+  parentExecution?: { operatorId: number }
 ) {
-  const actionId = String(Date.now());
+  const actionId = `action-${currentActionId++}`;
+  let currentExecutionId = 0;
 
   return new Proxy(func, {
     apply(_, __, args) {
       console.log("Firing action", path);
-      const executionId = String(Date.now());
+      const executionId = `execution-${currentExecutionId++}`;
+      const operatorId = 0;
       const proxy = createObjectMutationProxy(target, {
         path,
         executionId,
         actionId,
+        operatorId,
       });
       devtool.send({
         type: "action:start",
@@ -105,6 +150,7 @@ function createActionProxy(
           executionId,
           actionName: path.concat(key).join("."),
           path: path,
+          parentExecution,
         },
       });
       devtool.send({
@@ -112,10 +158,11 @@ function createActionProxy(
         data: {
           actionId,
           executionId,
-          operatorId: executionId,
+          operatorId,
           actionName: func.name,
           path: [],
           type: "action",
+          parentExecution,
         },
       });
       const result = Reflect.apply(func, proxy, args);
@@ -128,7 +175,7 @@ function createActionProxy(
               data: {
                 actionId,
                 executionId,
-                operatorId: executionId,
+                operatorId,
                 isAsync: true,
               },
             });
@@ -146,7 +193,7 @@ function createActionProxy(
               data: {
                 actionId,
                 executionId,
-                operatorId: executionId,
+                operatorId,
                 isAsync: true,
                 error,
               },
@@ -165,7 +212,7 @@ function createActionProxy(
           data: {
             actionId,
             executionId,
-            operatorId: executionId,
+            operatorId,
             isAsync: false,
           },
         });
@@ -189,6 +236,7 @@ function createObjectMutationProxy(
     path: string[];
     executionId: string;
     actionId: string;
+    operatorId: number;
   }
 ) {
   return new Proxy(target, {
@@ -196,12 +244,29 @@ function createObjectMutationProxy(
       const result = Reflect.get(target, key);
       const proxyTarget = proxyCache.get(result);
 
+      if (typeof result === "function") {
+        return createActionProxy(
+          target,
+          key as string,
+          result,
+          options.path,
+          options
+        );
+      }
+
+      if (isCustomClassInstance(result) && !proxyCache.has(result)) {
+        return createEffectsProxy(
+          result,
+          options.path.concat(key as string),
+          options
+        );
+      }
+
       if (
         !Array.isArray(result) &&
         typeof result === "object" &&
         result !== null
       ) {
-        console.log("proxyTarget", target, proxyTarget?.[PROXY_TARGET]);
         return createObjectMutationProxy(result, {
           ...options,
           path: proxyTarget ? proxyTarget[PROXY_TARGET].path : options.path,
@@ -216,7 +281,7 @@ function createObjectMutationProxy(
         data: {
           actionId: options.actionId,
           executionId: options.executionId,
-          operatorId: options.executionId,
+          operatorId: options.operatorId,
           mutations: [
             {
               method: "set",
