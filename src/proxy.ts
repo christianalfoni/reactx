@@ -230,6 +230,50 @@ function createActionProxy(
   });
 }
 
+function createArrayMutationProxy(
+  target: any,
+  parentKey: string,
+  options: {
+    path: string[];
+    executionId: string;
+    actionId: string;
+    operatorId: number;
+  }
+) {
+  return new Proxy(target, {
+    // Enhanced get trap for arrays to handle special array methods
+    get(_, key: string | symbol) {
+      const result = Reflect.get(target, key);
+
+      // Handle mutating array methods
+      if (mutatingArrayMethods.includes(key as string)) {
+        return (...args: []) => {
+          devtool.send({
+            type: "mutations",
+            data: {
+              actionId: options.actionId,
+              executionId: options.executionId,
+              operatorId: options.operatorId,
+              mutations: [
+                {
+                  method: key,
+                  delimiter: ".",
+                  path: options.path.concat(parentKey as string).join("."),
+                  args,
+                  hasChangedValue: true,
+                },
+              ],
+            },
+          });
+        };
+      }
+
+      // Recursively create proxies for nested objects
+      return result;
+    },
+  });
+}
+
 function createObjectMutationProxy(
   target: any,
   options: {
@@ -262,11 +306,11 @@ function createObjectMutationProxy(
         );
       }
 
-      if (
-        !Array.isArray(result) &&
-        typeof result === "object" &&
-        result !== null
-      ) {
+      if (Array.isArray(result)) {
+        return createArrayMutationProxy(result, key as string, options);
+      }
+
+      if (typeof result === "object" && result !== null) {
         return createObjectMutationProxy(result, {
           ...options,
           path: proxyTarget ? proxyTarget[PROXY_TARGET].path : options.path,

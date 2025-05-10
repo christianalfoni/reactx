@@ -8,9 +8,11 @@ class Effects {
 
 class Test {
   count = 0;
+  mips: string[] = [];
   constructor(private counter: Counter) {}
   async increase() {
     this.count++;
+    this.mips.push("hoho");
     this.counter.increase();
   }
 }
@@ -29,13 +31,20 @@ const todosState = reactive(new Counter());
 
 export default function App2() {
   return (
-    <h1
-      onClick={() => {
-        //   todosState.increase();
-        todosState.test.increase();
-      }}
-    >
-      App2 {todosState.count} {todosState.test.count}
-    </h1>
+    <>
+      <h1
+        onClick={() => {
+          //   todosState.increase();
+          todosState.test.increase();
+        }}
+      >
+        App2 {todosState.count} {todosState.test.count}
+      </h1>
+      <ul>
+        {todosState.test.mips.map((val, index) => (
+          <li key={index}>{val}</li>
+        ))}
+      </ul>
+    </>
   );
 }
