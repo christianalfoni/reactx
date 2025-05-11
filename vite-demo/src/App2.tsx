@@ -56,6 +56,7 @@ export default function App2() {
   return (
     <>
       <h1>Test App</h1>
+
       <input
         value={state.newTodoTitle}
         onChange={(e) => state.setNewTodoTitle(e.target.value)}

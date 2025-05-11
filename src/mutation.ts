@@ -1,6 +1,6 @@
 import { observable, transaction } from "mobx";
 
-type IdleInternalState<T> = {
+type IdleInternalState = {
   current: "IDLE";
 };
 
@@ -10,9 +10,9 @@ type ActiveInternalState<T> = {
   promise: Promise<T>;
 };
 
-type InternalState<T> = ActiveInternalState<T> | IdleInternalState<T>;
+type InternalState<T> = ActiveInternalState<T> | IdleInternalState;
 
-type BaseMutation<T, P> =
+type State<T, P> =
   | {
       error: null;
       isPending: true;
@@ -38,39 +38,43 @@ type BaseMutation<T, P> =
       value: T;
     };
 
-export type Mutation<T, P extends any[]> = BaseMutation<T, P> & {
-  mutate: (...args: P) => Promise<T>;
-  subscribe: () => () => void;
-};
+const PRIVATE = Symbol("PRIVATE");
 
-// Implementation that handles both cases
-export function mutation<T, P extends any[]>(
-  mutator: (...args: P) => Promise<T>
-): Mutation<T, P> {
-  let internalState: InternalState<T> = { current: "IDLE" };
-  let subscriptionCount = 0;
-
-  const mutationState = observable<Mutation<T, P>>({
-    error: null,
-    isPending: false,
-    pendingParams: null,
-    value: null,
-    mutate,
-    subscribe,
-  });
-
-  return mutationState;
-
-  function subscribe() {
-    subscriptionCount++;
+export class Mutation<T, P extends any[]> {
+  [PRIVATE]: {
+    mutator: (...args: P) => Promise<T>;
+    subscriptionCount: number;
+    internalState: InternalState<T>;
+    state: State<T, P>;
+  };
+  constructor(mutator: (...args: P) => Promise<T>) {
+    this[PRIVATE] = {
+      mutator,
+      subscriptionCount: 0,
+      internalState: {
+        current: "IDLE",
+      },
+      state: observable({
+        error: null,
+        isPending: false,
+        pendingParams: null,
+        value: null,
+      }),
+    };
+  }
+  subscribe() {
+    this[PRIVATE].subscriptionCount++;
 
     return () => {
-      subscriptionCount--;
+      this[PRIVATE].subscriptionCount--;
 
-      if (subscriptionCount === 0 && internalState.current !== "IDLE") {
-        internalState.abortController.abort();
-        internalState = { current: "IDLE" };
-        Object.assign(mutationState, {
+      if (
+        this[PRIVATE].subscriptionCount === 0 &&
+        this[PRIVATE].internalState.current !== "IDLE"
+      ) {
+        this[PRIVATE].internalState.abortController.abort();
+        this[PRIVATE].internalState = { current: "IDLE" };
+        Object.assign(this[PRIVATE].state, {
           error: null,
           isPending: false,
           pendingParams: null,
@@ -80,16 +84,16 @@ export function mutation<T, P extends any[]>(
     };
   }
 
-  function mutate(...params: P): Promise<T> {
+  mutate(...params: P): Promise<T> {
     // Cancel any ongoing request
-    if (internalState.current !== "IDLE") {
-      internalState.abortController.abort();
+    if (this[PRIVATE].internalState.current !== "IDLE") {
+      this[PRIVATE].internalState.abortController.abort();
     }
 
     const abortController = new AbortController();
 
     transaction(() => {
-      Object.assign(mutationState, {
+      Object.assign(this[PRIVATE].state, {
         error: null,
         isPending: true,
         pendingParams: params,
@@ -97,14 +101,14 @@ export function mutation<T, P extends any[]>(
       });
     });
 
-    const promise = mutator(...params)
+    const promise = this[PRIVATE].mutator(...params)
       .then((value) => {
         if (abortController.signal.aborted) {
           return value;
         }
 
         transaction(() => {
-          Object.assign(mutationState, {
+          Object.assign(this[PRIVATE].state, {
             error: null,
             isPending: false,
             pendingParams: null,
@@ -120,19 +124,19 @@ export function mutation<T, P extends any[]>(
         }
 
         transaction(() => {
-          Object.assign(mutationState, {
+          Object.assign(this[PRIVATE].state, {
             error,
             isPending: false,
             pendingParams: params as P,
             value: null,
           });
         });
-        internalState = { current: "IDLE" };
+        this[PRIVATE].internalState = { current: "IDLE" };
 
         throw error;
       });
 
-    internalState = {
+    this[PRIVATE].internalState = {
       current: "ACTIVE",
       abortController,
       promise,
@@ -145,4 +149,10 @@ export function mutation<T, P extends any[]>(
 
     return promise;
   }
+}
+
+export function mutation<T, P extends any[]>(
+  mutator: (...args: P) => Promise<T>
+): Mutation<T, P> {
+  return new Mutation(mutator);
 }
