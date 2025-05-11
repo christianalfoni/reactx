@@ -3,6 +3,7 @@ import {
   autorun,
   computed,
   isObservable,
+  isObservableArray,
   observable,
 } from "mobx";
 import {
@@ -50,7 +51,7 @@ function createArrayProxy(target: any[], path: string[]) {
   const baseHandler = createBaseProxyHandler(target);
 
   return new Proxy(
-    isObservable(target) ? _getAdministration(target).target_ : target,
+    isObservableArray(target) ? _getAdministration(target).values_ : target,
     {
       ...baseHandler,
 
@@ -134,7 +135,6 @@ function createActionProxy(
 
   return new Proxy(func, {
     apply(_, __, args) {
-      console.log("Firing action", path);
       const executionId = `execution-${currentExecutionId++}`;
       const operatorId = 0;
       const proxy = createObjectMutationProxy(target, {
@@ -248,6 +248,7 @@ function createArrayMutationProxy(
       // Handle mutating array methods
       if (mutatingArrayMethods.includes(key as string)) {
         return (...args: []) => {
+          const val = result.call(target, ...args);
           devtool.send({
             type: "mutations",
             data: {
@@ -265,6 +266,8 @@ function createArrayMutationProxy(
               ],
             },
           });
+
+          return val;
         };
       }
 
@@ -349,12 +352,15 @@ function createObjectMutationProxy(
 function createObjectProxy(target: object, path: string[]) {
   const baseHandler = createBaseProxyHandler(target);
   const isCustomClass = isCustomClassInstance(target);
+  const baseTarget = isObservable(target)
+    ? _getAdministration(target).target_
+    : target;
 
   if (isCustomClass) {
     const observedKeys = new Set<string>();
     const boundMethods: Record<string, Function> = {};
 
-    return new Proxy(target, {
+    return new Proxy(baseTarget, {
       ...baseHandler,
       get(_: any, key: string | symbol) {
         if (key === PROXY_TARGET) {
@@ -381,9 +387,24 @@ function createObjectProxy(target: object, path: string[]) {
         observedKeys.add(key);
 
         if (getter) {
-          const computedValue = computed(
-            getter.bind(createProxy(target, path.concat(key)))
-          );
+          const computedProxy = createProxy(baseTarget, path.concat(key));
+
+          let updateCount = 0;
+          const computedValue = computed(() => {
+            const val = getter.call(computedProxy);
+
+            devtool.send({
+              type: "derived",
+              data: {
+                path: path.concat(key),
+                paths: [],
+                value: val,
+                updateCount: updateCount++,
+              },
+            });
+
+            return val;
+          });
 
           Object.defineProperty(target, key, {
             configurable: true,
@@ -402,13 +423,18 @@ function createObjectProxy(target: object, path: string[]) {
           // This should only be used in DEV
           return (
             boundMethods[key] ||
-            (boundMethods[key] = createActionProxy(target, key, result, path))
+            (boundMethods[key] = createActionProxy(
+              baseTarget,
+              key,
+              result,
+              path
+            ))
           );
         }
 
         const boxedValue = observable.box(result);
 
-        Object.defineProperty(target, key, {
+        Object.defineProperty(baseTarget, key, {
           configurable: true,
           enumerable: true,
           get() {
@@ -448,7 +474,7 @@ function createObjectProxy(target: object, path: string[]) {
     });
   }
 
-  return new Proxy(target, {
+  return new Proxy(baseTarget, {
     ...baseHandler,
 
     // Enhanced get trap for objects
@@ -484,7 +510,8 @@ export function createProxy<T extends Record<string, any>>(
   if (
     target === null ||
     typeof target !== "object" ||
-    Object.prototype.toString.call(target) !== "[object Object]"
+    (Object.prototype.toString.call(target) !== "[object Object]" &&
+      !Array.isArray(target))
   ) {
     return target;
   }

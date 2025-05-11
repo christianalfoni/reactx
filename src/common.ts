@@ -24,7 +24,7 @@ export const PROXY_TARGET = Symbol("PROXY_TARGET");
 /**
  * Base proxy handler with common trap implementations
  */
-export function createBaseProxyHandler(target: any) {
+export function createBaseProxyHandler(target: any): ProxyHandler<any> {
   return {
     set() {
       throw new Error(`Cannot mutate from React`);
@@ -46,6 +46,12 @@ export function createBaseProxyHandler(target: any) {
     },
     isExtensible() {
       return false;
+    },
+    defineProperty(_, key, attrs) {
+      return Reflect.defineProperty(target, key, attrs);
+    },
+    setPrototypeOf(_, v) {
+      return Reflect.setPrototypeOf(target, v);
     },
   };
 }
