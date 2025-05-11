@@ -98,6 +98,7 @@ function createEffectsProxy(
         return (...args: any[]) => {
           const funcResult = result.call(target, ...args);
 
+          console.log("effect", path);
           devtool.send({
             type: "effect",
             data: {
@@ -245,6 +246,10 @@ function createArrayMutationProxy(
     get(_, key: string | symbol) {
       const result = Reflect.get(target, key);
 
+      if (typeof key === "symbol") {
+        return result;
+      }
+
       // Handle mutating array methods
       if (mutatingArrayMethods.includes(key as string)) {
         return (...args: []) => {
@@ -272,7 +277,10 @@ function createArrayMutationProxy(
       }
 
       // Recursively create proxies for nested objects
-      return result;
+      return createObjectMutationProxy(result, {
+        ...options,
+        path: options.path.concat(parentKey as string, key as string),
+      });
     },
   });
 }
@@ -286,10 +294,22 @@ function createObjectMutationProxy(
     operatorId: number;
   }
 ) {
+  if (
+    target === null ||
+    typeof target !== "object" ||
+    Object.prototype.toString.call(target) !== "[object Object]"
+  ) {
+    return target;
+  }
+
   return new Proxy(target, {
     get(target, key) {
       const result = Reflect.get(target, key);
       const proxyTarget = proxyCache.get(result);
+
+      if (typeof key === "symbol") {
+        return result;
+      }
 
       if (typeof result === "function") {
         return createActionProxy(
@@ -452,9 +472,12 @@ function createObjectProxy(target: object, path: string[]) {
         autorun(() => {
           const val = boxedValue.get();
 
-          // We do not update the actual class instance more than once or it will
+          // We do not update the actual class instance or array more than once or it will
           // overwrite existing state in the devtools
-          if (!isFirstUpdate && isCustomClassInstance(val)) {
+          if (
+            !isFirstUpdate &&
+            (isCustomClassInstance(val) || Array.isArray(val))
+          ) {
             return;
           }
 
@@ -488,14 +511,6 @@ function createObjectProxy(target: object, path: string[]) {
       if (typeof key === "symbol" || typeof result === "function") {
         return result;
       }
-
-      devtool.send({
-        type: "state",
-        data: {
-          path: path.concat(key),
-          value: result,
-        },
-      });
 
       // Recursively create proxies for nested objects
       return createProxy(result, path.concat(key));
