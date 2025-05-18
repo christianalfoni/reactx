@@ -1,7 +1,7 @@
 # Hello World
 
 ```tsx
-import { reactive } from "mobx-lite";
+import { reactive } from "reactx";
 
 class CounterState {
   count = 0;
@@ -23,8 +23,9 @@ function Counter() {
 }
 ```
 
-`reactive` is only when providing your root state to React, however you choose to expose it. It will:
+`reactive` is only called once, where you provide your root state to React, however you choose to expose it. It will:
 
 - Lazily enhance your state management to be reactive, where needed
 - Prevent direct state mutation from React
 - Bind methods accessed to the class instance
+- Enable the visualization of your app and interactions in the devtools

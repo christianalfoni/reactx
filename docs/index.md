@@ -3,8 +3,8 @@
 layout: home
 
 hero:
-  name: "Mobx Lite"
-  text: "Mobx Reimagined"
+  name: "ReactX"
+  text: "Transparent reactivity"
   tagline: Managing state and data in rich client applications
   actions:
     - theme: brand

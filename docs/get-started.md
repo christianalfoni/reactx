@@ -3,15 +3,15 @@
 ::: code-group
 
 ```sh [npm]
-npm install mobx-lite
+npm install reactx
 ```
 
 ```sh [yarn]
-yarn add mobx-lite
+yarn add reactx
 ```
 
 ```sh [pnpm]
-pnpm add mobx-lite
+pnpm add reactx
 ```
 
 :::
@@ -23,14 +23,14 @@ Configure observation plugin:
 ```ts [vite.config.ts (babel)]
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import mobxLite from "mobx-lite/babel-plugin";
+import reactx from "reactx/babel-plugin";
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react({
       babel: {
-        plugins: [mobxLite()],
+        plugins: [reactx()],
       },
     }),
   ],
@@ -40,13 +40,13 @@ export default defineConfig({
 ```ts [vite.config.ts (swc)]
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
-import mobxLite from "mobx-lite/swc-plugin";
+import reactx from "reactx/swc-plugin";
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react({
-      plugins: [mobxLite()],
+      plugins: [reactx()],
     }),
   ],
 });
@@ -61,7 +61,7 @@ You can exclude certain paths from being transformed by the plugin using the `ex
 export default defineConfig({
   plugins: [
     react({
-      plugins: [mobxLite({ exclude: ["src/ui-components"] })],
+      plugins: [reactx({ exclude: ["src/ui-components"] })],
     }),
   ],
 });
