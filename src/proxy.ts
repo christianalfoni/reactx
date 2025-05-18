@@ -13,7 +13,7 @@ import {
 } from "./common";
 import { Devtools } from "./Devtool";
 
-const devtool = new Devtools("MobX Lite");
+const devtool = new Devtools("reactx");
 
 console.log("Connecting to devtools");
 devtool.connect("localhost:3031", (message) => {
@@ -98,7 +98,6 @@ function createEffectsProxy(
         return (...args: any[]) => {
           const funcResult = result.call(target, ...args);
 
-          console.log("effect", path);
           devtool.send({
             type: "effect",
             data: {
@@ -399,17 +398,19 @@ function createObjectProxy(target: object, path: string[]) {
           return createProxy(Reflect.get(target, key), path.concat(key));
         }
 
-        const getter = Object.getOwnPropertyDescriptor(
+        const descriptor = Object.getOwnPropertyDescriptor(
           Object.getPrototypeOf(target),
           key
-        )?.get;
+        );
 
         observedKeys.add(key);
 
-        if (getter) {
+        if (descriptor && descriptor.get && !descriptor.set) {
           const computedProxy = createProxy(baseTarget, path.concat(key));
+          const getter = descriptor.get;
 
           let updateCount = 0;
+
           const computedValue = computed(() => {
             const val = getter.call(computedProxy);
 
@@ -465,34 +466,38 @@ function createObjectProxy(target: object, path: string[]) {
           },
         });
 
-        const value = createProxy(boxedValue.get(), path.concat(key));
+        let value = boxedValue.get();
+        const proxyValue = createProxy(value, path.concat(key));
 
-        let isFirstUpdate = true;
+        devtool.send({
+          type: "state",
+          data: {
+            path: path.concat(key),
+            value,
+          },
+        });
 
         autorun(() => {
-          const val = boxedValue.get();
+          const newValue = boxedValue.get();
 
           // We do not update the actual class instance or array more than once or it will
           // overwrite existing state in the devtools
-          if (
-            !isFirstUpdate &&
-            (isCustomClassInstance(val) || Array.isArray(val))
-          ) {
+          if (value === newValue) {
             return;
           }
-
-          isFirstUpdate = false;
 
           devtool.send({
             type: "state",
             data: {
               path: path.concat(key),
-              value: val,
+              value: newValue,
             },
           });
+
+          value = newValue;
         });
 
-        return value;
+        return proxyValue;
       },
     });
   }

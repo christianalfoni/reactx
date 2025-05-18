@@ -41,12 +41,15 @@ type State<T, P> =
 const PRIVATE = Symbol("PRIVATE");
 
 export class Mutation<T, P extends any[]> {
-  [PRIVATE]: {
+  private [PRIVATE]: {
     mutator: (...args: P) => Promise<T>;
     subscriptionCount: number;
     internalState: InternalState<T>;
-    state: State<T, P>;
   };
+  error: Error | null = null;
+  isPending: boolean = false;
+  pendingParams: P | null = null;
+  value: T | null = null;
   constructor(mutator: (...args: P) => Promise<T>) {
     this[PRIVATE] = {
       mutator,
@@ -54,12 +57,6 @@ export class Mutation<T, P extends any[]> {
       internalState: {
         current: "IDLE",
       },
-      state: observable({
-        error: null,
-        isPending: false,
-        pendingParams: null,
-        value: null,
-      }),
     };
   }
   subscribe() {
@@ -74,7 +71,7 @@ export class Mutation<T, P extends any[]> {
       ) {
         this[PRIVATE].internalState.abortController.abort();
         this[PRIVATE].internalState = { current: "IDLE" };
-        Object.assign(this[PRIVATE].state, {
+        Object.assign(this, {
           error: null,
           isPending: false,
           pendingParams: null,
@@ -93,7 +90,7 @@ export class Mutation<T, P extends any[]> {
     const abortController = new AbortController();
 
     transaction(() => {
-      Object.assign(this[PRIVATE].state, {
+      Object.assign(this, {
         error: null,
         isPending: true,
         pendingParams: params,
@@ -108,7 +105,7 @@ export class Mutation<T, P extends any[]> {
         }
 
         transaction(() => {
-          Object.assign(this[PRIVATE].state, {
+          Object.assign(this, {
             error: null,
             isPending: false,
             pendingParams: null,
@@ -124,7 +121,7 @@ export class Mutation<T, P extends any[]> {
         }
 
         transaction(() => {
-          Object.assign(this[PRIVATE].state, {
+          Object.assign(this, {
             error,
             isPending: false,
             pendingParams: params as P,
@@ -153,6 +150,10 @@ export class Mutation<T, P extends any[]> {
 
 export function mutation<T, P extends any[]>(
   mutator: (...args: P) => Promise<T>
-): Mutation<T, P> {
-  return new Mutation(mutator);
+) {
+  return new Mutation(mutator) as Omit<
+    Mutation<T, P>,
+    "error" | "value" | "isPending" | "pendingParams"
+  > &
+    State<T, P>;
 }
