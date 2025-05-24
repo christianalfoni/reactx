@@ -1,7 +1,7 @@
 # reactive
 
 ```ts
-import { reactive } from "mobx-lite";
+import { reactive } from "reactx";
 
 class State {
   count = 0;

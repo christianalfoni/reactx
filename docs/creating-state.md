@@ -9,10 +9,10 @@ class CounterState {
 }
 ```
 
-With **Mobx Lite** you do not need to define your state as reactive. This is also true for nested classes. Just create classes as you normally do. Only when you expose the root state to React you need to make it reactive.
+With **ReactX** you do not need to define your state as reactive. This is also true for nested classes. Just create classes as you normally do. Only when you expose the root state to React you need to make it reactive.
 
 ```tsx
-import { reactive } from "mobx-lite";
+import { reactive } from "reactx";
 
 const reactiveCounter = reactive(new CounterState());
 
@@ -24,6 +24,7 @@ This is what `reactive` does:
 - Lazily makes properties reactive when accessed by React
 - Prevents any direct mutations happening from React
 - All class methods called from React are bound to the class instance
+- Sends information to the devtools
 
 ```tsx
 function Counter({ counter }) {

@@ -1,6 +1,8 @@
 # mutation
 
 ```ts
+import { mutation } from "reactx";
+
 class Data {
   addTodoMutation = mutation((title: string) =>
     postJson("/todos", {

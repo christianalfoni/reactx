@@ -5,7 +5,7 @@ Another aspect of data is mutations. Even though mutations also represents a req
 An important aspect of performing mutations is showing optimistic data.
 
 ```ts
-import { query, mutation } from "mobx-lite";
+import { query, mutation } from "reactx";
 
 class Data {
   todosQuery = query(() => fetchJson("/todos"));

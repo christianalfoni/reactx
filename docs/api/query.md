@@ -1,7 +1,7 @@
 # query
 
 ```ts
-import { query } from "mobx-lite";
+import { query } from "reactx";
 
 class Data {
   todosQuery = query(() => fetchJson("/todos"));
