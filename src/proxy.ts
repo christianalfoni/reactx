@@ -13,21 +13,7 @@ import {
 } from "./common";
 import { Devtools } from "./Devtool";
 
-const devtool = new Devtools("reactx");
-
-console.log("Connecting to devtools");
-devtool.connect("localhost:3031", (message) => {
-  console.log("Devtools message", message);
-});
-
-devtool.send({
-  type: "init",
-  data: {
-    state: {},
-    actions: {},
-    delimiter: ".",
-  },
-});
+let devtools: Devtools | undefined;
 
 const proxyCache = new WeakMap<any, any>();
 
@@ -82,208 +68,6 @@ function createArrayProxy(target: any[], path: string[]) {
   );
 }
 
-let currentEffectId = 0;
-
-function createEffectsProxy(
-  target: any,
-  path: string[],
-  execution: { actionId: string; executionId: string; operatorId: number }
-) {
-  return new Proxy(target, {
-    get(_, key) {
-      const effectId = currentEffectId++;
-      const result = Reflect.get(target, key);
-
-      if (typeof result === "function") {
-        return (...args: any[]) => {
-          const funcResult = result.call(target, ...args);
-
-          devtool.send({
-            type: "effect",
-            data: {
-              effectId,
-              actionId: execution.actionId,
-              executionId: execution.executionId,
-              operatorId: execution.operatorId,
-              method: key,
-              args,
-              name: path.join("."),
-              result: funcResult,
-              isPending: false,
-              error: null,
-            },
-          });
-
-          return funcResult;
-        };
-      }
-    },
-  });
-}
-
-let currentActionId = 0;
-
-function createActionProxy(
-  target: any,
-  key: string,
-  func: Function,
-  path: string[],
-  parentExecution?: { operatorId: number }
-) {
-  const actionId = `action-${currentActionId++}`;
-  let currentExecutionId = 0;
-
-  return new Proxy(func, {
-    apply(_, __, args) {
-      const executionId = `execution-${currentExecutionId++}`;
-      const operatorId = 0;
-      const proxy = createObjectMutationProxy(target, {
-        path,
-        executionId,
-        actionId,
-        operatorId,
-      });
-      devtool.send({
-        type: "action:start",
-        data: {
-          actionId,
-          executionId,
-          actionName: path.concat(key).join("."),
-          path: path,
-          parentExecution,
-        },
-      });
-      devtool.send({
-        type: "operator:start",
-        data: {
-          actionId,
-          executionId,
-          operatorId,
-          actionName: func.name,
-          path: [],
-          type: "action",
-          parentExecution,
-        },
-      });
-      const result = Reflect.apply(func, proxy, args);
-
-      if (result instanceof Promise) {
-        result
-          .then(() => {
-            devtool.send({
-              type: "operator:end",
-              data: {
-                actionId,
-                executionId,
-                operatorId,
-                isAsync: true,
-              },
-            });
-            devtool.send({
-              type: "action:end",
-              data: {
-                actionId,
-                executionId,
-              },
-            });
-          })
-          .catch((error) => {
-            devtool.send({
-              type: "operator:end",
-              data: {
-                actionId,
-                executionId,
-                operatorId,
-                isAsync: true,
-                error,
-              },
-            });
-            devtool.send({
-              type: "action:end",
-              data: {
-                actionId,
-                executionId,
-              },
-            });
-          });
-      } else {
-        devtool.send({
-          type: "operator:end",
-          data: {
-            actionId,
-            executionId,
-            operatorId,
-            isAsync: false,
-          },
-        });
-        devtool.send({
-          type: "action:end",
-          data: {
-            actionId,
-            executionId,
-          },
-        });
-      }
-
-      return result;
-    },
-  });
-}
-
-function createArrayMutationProxy(
-  target: any,
-  parentKey: string,
-  options: {
-    path: string[];
-    executionId: string;
-    actionId: string;
-    operatorId: number;
-  }
-) {
-  return new Proxy(target, {
-    // Enhanced get trap for arrays to handle special array methods
-    get(_, key: string | symbol) {
-      const result = Reflect.get(target, key);
-
-      if (typeof key === "symbol") {
-        return result;
-      }
-
-      // Handle mutating array methods
-      if (mutatingArrayMethods.includes(key as string)) {
-        return (...args: []) => {
-          const val = result.call(target, ...args);
-          devtool.send({
-            type: "mutations",
-            data: {
-              actionId: options.actionId,
-              executionId: options.executionId,
-              operatorId: options.operatorId,
-              mutations: [
-                {
-                  method: key,
-                  delimiter: ".",
-                  path: options.path.concat(parentKey as string).join("."),
-                  args,
-                  hasChangedValue: true,
-                },
-              ],
-            },
-          });
-
-          return val;
-        };
-      }
-
-      // Recursively create proxies for nested objects
-      return createObjectMutationProxy(result, {
-        ...options,
-        path: options.path.concat(parentKey as string, key as string),
-      });
-    },
-  });
-}
-
 function createObjectMutationProxy(
   target: any,
   options: {
@@ -329,7 +113,7 @@ function createObjectMutationProxy(
       }
 
       if (Array.isArray(result)) {
-        return createArrayMutationProxy(result, key as string, options);
+        return createArrayDevtoolsProxy(result, key as string, options);
       }
 
       if (typeof result === "object" && result !== null) {
@@ -342,7 +126,7 @@ function createObjectMutationProxy(
       return result;
     },
     set(target, key, value) {
-      devtool.send({
+      devtools?.send({
         type: "mutations",
         data: {
           actionId: options.actionId,
@@ -414,7 +198,7 @@ function createObjectProxy(target: object, path: string[]) {
           const computedValue = computed(() => {
             const val = getter.call(computedProxy);
 
-            devtool.send({
+            devtools?.send({
               type: "derived",
               data: {
                 path: path.concat(key),
@@ -440,8 +224,7 @@ function createObjectProxy(target: object, path: string[]) {
 
         const result = Reflect.get(target, key);
 
-        if (typeof result === "function") {
-          // This should only be used in DEV
+        if (devtools && typeof result === "function") {
           return (
             boundMethods[key] ||
             (boundMethods[key] = createActionProxy(
@@ -469,33 +252,37 @@ function createObjectProxy(target: object, path: string[]) {
         let value = boxedValue.get();
         const proxyValue = createProxy(value, path.concat(key));
 
-        devtool.send({
-          type: "state",
-          data: {
-            path: path.concat(key),
-            value,
-          },
-        });
+        if (devtools) {
+          const devtoolsInstance = devtools;
 
-        autorun(() => {
-          const newValue = boxedValue.get();
-
-          // We do not update the actual class instance or array more than once or it will
-          // overwrite existing state in the devtools
-          if (value === newValue) {
-            return;
-          }
-
-          devtool.send({
+          devtoolsInstance.send({
             type: "state",
             data: {
               path: path.concat(key),
-              value: newValue,
+              value,
             },
           });
 
-          value = newValue;
-        });
+          autorun(() => {
+            const newValue = boxedValue.get();
+
+            // We do not update the actual class instance or array more than once or it will
+            // overwrite existing state in the devtools
+            if (value === newValue) {
+              return;
+            }
+
+            devtoolsInstance.send({
+              type: "state",
+              data: {
+                path: path.concat(key),
+                value: newValue,
+              },
+            });
+
+            value = newValue;
+          });
+        }
 
         return proxyValue;
       },
@@ -554,4 +341,237 @@ export function createProxy<T extends Record<string, any>>(
   proxyCache.set(unwrappedTarget, proxy);
 
   return proxy;
+}
+
+export function reactive<T extends Record<string, any>>(
+  target: T,
+  development: boolean | string = false
+) {
+  if (development) {
+    devtools = new Devtools("reactx");
+
+    devtools.connect(
+      typeof development === "string" ? development : "localhost:3031",
+      () => {
+        // TODO: Take state change messages and change internal state
+      }
+    );
+
+    devtools.send({
+      type: "init",
+      data: {
+        state: {},
+        actions: {},
+        delimiter: ".",
+      },
+    });
+  }
+
+  return createProxy(target);
+}
+
+/**
+ * DEVTOOL PROXIES
+ */
+
+let currentEffectId = 0;
+
+function createEffectsProxy(
+  target: any,
+  path: string[],
+  execution: { actionId: string; executionId: string; operatorId: number }
+) {
+  return new Proxy(target, {
+    get(_, key) {
+      const effectId = currentEffectId++;
+      const result = Reflect.get(target, key);
+
+      if (typeof result === "function") {
+        return (...args: any[]) => {
+          const funcResult = result.call(target, ...args);
+
+          devtools!.send({
+            type: "effect",
+            data: {
+              effectId,
+              actionId: execution.actionId,
+              executionId: execution.executionId,
+              operatorId: execution.operatorId,
+              method: key,
+              args,
+              name: path.join("."),
+              result: funcResult,
+              isPending: false,
+              error: null,
+            },
+          });
+
+          return funcResult;
+        };
+      }
+    },
+  });
+}
+
+let currentActionId = 0;
+
+function createActionProxy(
+  target: any,
+  key: string,
+  func: Function,
+  path: string[],
+  parentExecution?: { operatorId: number }
+) {
+  const actionId = `action-${currentActionId++}`;
+  let currentExecutionId = 0;
+
+  return new Proxy(func, {
+    apply(_, __, args) {
+      const executionId = `execution-${currentExecutionId++}`;
+      const operatorId = 0;
+      const proxy = createObjectMutationProxy(target, {
+        path,
+        executionId,
+        actionId,
+        operatorId,
+      });
+      devtools!.send({
+        type: "action:start",
+        data: {
+          actionId,
+          executionId,
+          actionName: path.concat(key).join("."),
+          path: path,
+          parentExecution,
+        },
+      });
+      devtools!.send({
+        type: "operator:start",
+        data: {
+          actionId,
+          executionId,
+          operatorId,
+          actionName: func.name,
+          path: [],
+          type: "action",
+          parentExecution,
+        },
+      });
+      const result = Reflect.apply(func, proxy, args);
+
+      if (result instanceof Promise) {
+        result
+          .then(() => {
+            devtools!.send({
+              type: "operator:end",
+              data: {
+                actionId,
+                executionId,
+                operatorId,
+                isAsync: true,
+              },
+            });
+            devtools!.send({
+              type: "action:end",
+              data: {
+                actionId,
+                executionId,
+              },
+            });
+          })
+          .catch((error) => {
+            devtools!.send({
+              type: "operator:end",
+              data: {
+                actionId,
+                executionId,
+                operatorId,
+                isAsync: true,
+                error,
+              },
+            });
+            devtools!.send({
+              type: "action:end",
+              data: {
+                actionId,
+                executionId,
+              },
+            });
+          });
+      } else {
+        devtools!.send({
+          type: "operator:end",
+          data: {
+            actionId,
+            executionId,
+            operatorId,
+            isAsync: false,
+          },
+        });
+        devtools!.send({
+          type: "action:end",
+          data: {
+            actionId,
+            executionId,
+          },
+        });
+      }
+
+      return result;
+    },
+  });
+}
+
+function createArrayDevtoolsProxy(
+  target: any,
+  parentKey: string,
+  options: {
+    path: string[];
+    executionId: string;
+    actionId: string;
+    operatorId: number;
+  }
+) {
+  return new Proxy(target, {
+    // Enhanced get trap for arrays to handle special array methods
+    get(_, key: string | symbol) {
+      const result = Reflect.get(target, key);
+
+      if (typeof key === "symbol") {
+        return result;
+      }
+
+      // Handle mutating array methods
+      if (mutatingArrayMethods.includes(key as string)) {
+        return (...args: []) => {
+          const val = result.call(target, ...args);
+          devtools!.send({
+            type: "mutations",
+            data: {
+              actionId: options.actionId,
+              executionId: options.executionId,
+              operatorId: options.operatorId,
+              mutations: [
+                {
+                  method: key,
+                  delimiter: ".",
+                  path: options.path.concat(parentKey as string).join("."),
+                  args,
+                  hasChangedValue: true,
+                },
+              ],
+            },
+          });
+
+          return val;
+        };
+      }
+
+      // Recursively create proxies for nested objects
+      return createObjectMutationProxy(result, {
+        ...options,
+        path: options.path.concat(parentKey as string, key as string),
+      });
+    },
+  });
 }

@@ -1,7 +1,7 @@
 {
-  "name": "mobx-lite",
-  "version": "0.1.15",
-  "description": "Managing state and data in rich client applications",
+  "name": "reactx",
+  "version": "0.2.0-alpha.1",
+  "description": "Transparent reactive state management",
   "keywords": [
     "state",
     "management",

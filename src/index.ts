@@ -7,7 +7,7 @@ configure({
 });
 
 export { createImmutableProxy as immutableReactive } from "./immutableProxy";
-export { createProxy as reactive } from "./proxy";
+export { reactive } from "./proxy";
 export { query } from "./query";
 export type { Query } from "./query";
 export { mutation } from "./mutation";
