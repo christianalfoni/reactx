@@ -16,13 +16,21 @@ type TodoDTO = {
   completed: boolean;
 };
 
-const todosData: TodoDTO[] = [];
-
 class State {
   private storage = new JSONStorage("todos");
-  private todos = query<TodoDTO[]>(() => Promise.resolve(todosData));
+  private todos = query<TodoDTO[]>(() =>
+    Promise.resolve(this.storage.get("list") || [])
+  );
   newTodoTitle = "";
+  someArray = [{ mip: "mop" }];
   filter: "all" | "completed" | "active" = "all";
+
+  constructor() {
+    setTimeout(() => {
+      this.someArray[0].mip = "mop2";
+    }, 1000);
+  }
+
   get filteredTodos() {
     return (
       this.todos.value?.filter((todo) => {
@@ -40,17 +48,21 @@ class State {
     this.newTodoTitle = title;
   }
   addTodo() {
-    todosData.unshift({ title: this.newTodoTitle, completed: false });
+    const todos = this.todos.value?.slice() ?? [];
+    todos.unshift({ title: this.newTodoTitle, completed: false });
+    this.storage.set("list", todos);
     this.newTodoTitle = "";
     this.todos.revalidate();
   }
   toggleCompleted(index: number) {
-    todosData[index].completed = !todosData[index].completed;
+    const todos = this.todos.value?.slice() ?? [];
+    todos[index].completed = !todos[index].completed;
+    this.storage.set("list", todos);
     this.todos.revalidate();
   }
 }
 
-const state = reactive(new State());
+const state = reactive(new State(), true);
 
 export default function App2() {
   return (
@@ -61,7 +73,9 @@ export default function App2() {
         value={state.newTodoTitle}
         onChange={(e) => state.setNewTodoTitle(e.target.value)}
       />
-      <button onClick={() => state.addTodo()}>Add</button>
+      <button onClick={() => state.addTodo()}>
+        Add ({state.someArray[0].mip})
+      </button>
       <ul>
         {state.filteredTodos.map((todo, index) => (
           <li key={index}>
@@ -77,3 +91,19 @@ export default function App2() {
     </>
   );
 }
+
+/**
+  Overmind 2.0
+  
+  function Namespace() {
+    const state = reactive({
+      count: 0,
+      increase() {
+        state.count++
+      }
+    })
+      
+    return state
+  }
+
+ */

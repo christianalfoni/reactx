@@ -62,146 +62,145 @@ function createBlockingPromise<T>() {
   };
 }
 
-const PRIVATE = Symbol("PRIVATE");
+function executeQuery<T>(query: Query<T>) {
+  if (query[INTERNAL].internalState.current !== "IDLE") {
+    query[INTERNAL].internalState.abortController.abort();
+  }
 
-export class Query<T> {
-  private [PRIVATE]: {
-    fetcher: () => Promise<T>;
-    executeQuery: () => Promise<T>;
-    blockingPromise: BlockingPromise<T>;
-    subscriptionCount: number;
-    internalState: InternalState<T>;
-    state: QueryState<T>;
+  const abortController = new AbortController();
+
+  query.isRevalidating = true;
+
+  const observablePromise = createObservablePromise<T>(
+    query[INTERNAL].fetcher(),
+    abortController,
+    (promise) => {
+      if (promise.status === "fulfilled") {
+        const value = promise.value;
+        transaction(() => {
+          Object.assign(query, {
+            error: null,
+            isFetching: false,
+            promise,
+            value,
+            isRevalidating: false,
+          });
+        });
+      } else {
+        transaction(() => {
+          Object.assign(query, {
+            error: promise.reason,
+            isFetching: false,
+            promise,
+            isRevalidating: false,
+            value: null,
+          });
+        });
+      }
+    }
+  );
+
+  query[INTERNAL].internalState = {
+    current: "ACTIVE",
+    abortController,
   };
 
-  constructor(private fetcher: () => Promise<T>) {
+  return observablePromise;
+}
+
+const INTERNAL = Symbol("internal");
+
+export class Query<T> {
+  private [INTERNAL]: {
+    fetcher: () => Promise<T>;
+    subscriptionCount: number;
+    internalState: InternalState<T>;
+  };
+
+  private state: QueryState<T>;
+
+  constructor(fetcher: () => Promise<T>) {
     const blockingPromise = createBlockingPromise<T>();
-    this[PRIVATE] = {
+
+    this[INTERNAL] = {
       fetcher,
-      blockingPromise,
       subscriptionCount: 0,
       internalState: {
         current: "IDLE",
         blockingPromise,
       },
-      state: observable({
-        error: null,
-        value: null,
-        isRevalidating: false,
-        isFetching: true,
-        // We set a pending blocking promise as we can not set state during render
-        promise: createPendingPromise(blockingPromise.promise),
-      }),
-      executeQuery: () => {
-        if (this[PRIVATE].internalState.current !== "IDLE") {
-          this[PRIVATE].internalState.abortController.abort();
-        }
-
-        const abortController = new AbortController();
-
-        this.isRevalidating = true;
-
-        const observablePromise = createObservablePromise<T>(
-          this.fetcher(),
-          abortController,
-          (promise) => {
-            if (promise.status === "fulfilled") {
-              const value = promise.value;
-              transaction(() => {
-                Object.assign(this, {
-                  error: null,
-                  isFetching: false,
-                  promise,
-                  value,
-                  isRevalidating: false,
-                });
-              });
-            } else {
-              transaction(() => {
-                Object.assign(this, {
-                  error: promise.reason,
-                  isFetching: false,
-                  promise,
-                  isRevalidating: false,
-                  value: null,
-                });
-              });
-            }
-          }
-        );
-
-        this[PRIVATE].internalState = {
-          current: "ACTIVE",
-          abortController,
-        };
-
-        return observablePromise;
-      },
     };
+    this.state = observable({
+      error: null,
+      value: null,
+      isRevalidating: false,
+      isFetching: true,
+      // We set a pending blocking promise as we can not set state during render
+      promise: createPendingPromise(blockingPromise.promise),
+    });
+
+    this.state = observable({
+      error: null,
+      value: null,
+      isRevalidating: false,
+      isFetching: true,
+      // We set a pending blocking promise as we can not set state during render
+      promise: createPendingPromise(blockingPromise.promise),
+    });
   }
 
   get error() {
-    if (this[PRIVATE].internalState.current !== "ACTIVE") {
-      this[PRIVATE].internalState.blockingPromise.resolve(
-        this[PRIVATE].executeQuery()
-      );
+    if (this[INTERNAL].internalState.current !== "ACTIVE") {
+      this[INTERNAL].internalState.blockingPromise.resolve(executeQuery(this));
     }
 
-    return this[PRIVATE].state.error;
+    return this.state.error;
   }
   set error(newValue) {
-    this[PRIVATE].state.error = newValue;
+    this.state.error = newValue;
   }
   get value() {
-    if (this[PRIVATE].internalState.current !== "ACTIVE") {
-      this[PRIVATE].internalState.blockingPromise.resolve(
-        this[PRIVATE].executeQuery()
-      );
+    if (this[INTERNAL].internalState.current !== "ACTIVE") {
+      this[INTERNAL].internalState.blockingPromise.resolve(executeQuery(this));
     }
 
-    return this[PRIVATE].state.value;
+    return this.state.value;
   }
   set value(newValue) {
-    this[PRIVATE].state.value = newValue;
+    this.state.value = newValue;
   }
   get isFetching() {
-    if (this[PRIVATE].internalState.current !== "ACTIVE") {
-      this[PRIVATE].internalState.blockingPromise.resolve(
-        this[PRIVATE].executeQuery()
-      );
+    if (this[INTERNAL].internalState.current !== "ACTIVE") {
+      this[INTERNAL].internalState.blockingPromise.resolve(executeQuery(this));
     }
 
-    return this[PRIVATE].state.isFetching;
+    return this.state.isFetching;
   }
   set isFetching(newValue) {
-    this[PRIVATE].state.isFetching = newValue;
+    this.state.isFetching = newValue;
   }
   get isRevalidating() {
-    if (this[PRIVATE].internalState.current !== "ACTIVE") {
-      this[PRIVATE].internalState.blockingPromise.resolve(
-        this[PRIVATE].executeQuery()
-      );
+    if (this[INTERNAL].internalState.current !== "ACTIVE") {
+      this[INTERNAL].internalState.blockingPromise.resolve(executeQuery(this));
     }
 
-    return this[PRIVATE].state.isRevalidating;
+    return this.state.isRevalidating;
   }
   set isRevalidating(newValue) {
-    this[PRIVATE].state.isRevalidating = newValue;
+    this.state.isRevalidating = newValue;
   }
   get promise() {
-    if (this[PRIVATE].internalState.current !== "ACTIVE") {
-      this[PRIVATE].internalState.blockingPromise.resolve(
-        this[PRIVATE].executeQuery()
-      );
+    if (this[INTERNAL].internalState.current !== "ACTIVE") {
+      this[INTERNAL].internalState.blockingPromise.resolve(executeQuery(this));
     }
 
-    return this[PRIVATE].state.promise;
+    return this.state.promise;
   }
   set promise(newValue) {
-    this[PRIVATE].state.promise = newValue;
+    this.state.promise = newValue;
   }
   fetch() {
-    const promise = this[PRIVATE].executeQuery();
+    const promise = executeQuery(this);
 
     transaction(() => {
       Object.assign(this, {
@@ -216,17 +215,17 @@ export class Query<T> {
     return promise;
   }
   subscribe() {
-    this[PRIVATE].subscriptionCount++;
+    this[INTERNAL].subscriptionCount++;
 
     return () => {
-      this[PRIVATE].subscriptionCount--;
+      this[INTERNAL].subscriptionCount--;
 
       if (
-        this[PRIVATE].subscriptionCount === 0 &&
-        this[PRIVATE].internalState.current !== "IDLE"
+        this[INTERNAL].subscriptionCount === 0 &&
+        this[INTERNAL].internalState.current !== "IDLE"
       ) {
-        this[PRIVATE].internalState.abortController.abort();
-        this[PRIVATE].internalState = {
+        this[INTERNAL].internalState.abortController.abort();
+        this[INTERNAL].internalState = {
           current: "IDLE",
           blockingPromise: createBlockingPromise(),
         };
@@ -235,7 +234,7 @@ export class Query<T> {
           error: null,
           isFetching: true,
           promise: createPendingPromise(
-            this[PRIVATE].internalState.blockingPromise.promise
+            this[INTERNAL].internalState.blockingPromise.promise
           ),
           value: null,
           isRevalidating: false,
@@ -245,15 +244,15 @@ export class Query<T> {
   }
 
   revalidate(): Promise<T> {
-    if (this[PRIVATE].internalState.current !== "ACTIVE") {
-      const promise = this[PRIVATE].executeQuery();
+    if (this[INTERNAL].internalState.current !== "ACTIVE") {
+      const promise = executeQuery(this);
 
-      this[PRIVATE].internalState.blockingPromise.resolve(promise);
+      this[INTERNAL].internalState.blockingPromise.resolve(promise);
 
       return this.promise;
     }
 
-    return this[PRIVATE].executeQuery();
+    return executeQuery(this);
   }
 }
 

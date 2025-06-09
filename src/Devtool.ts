@@ -81,9 +81,6 @@ export class Devtools {
     const unsafeClassNames = this.unsafeClassNames;
     const circularReferenceCache = this.circularReferenceCache;
 
-    // @ts-ignore
-    console.log(message.type.toUpperCase(), message.data?.path);
-
     this.sendMessage(
       JSON.stringify(message, function (_, value) {
         if (typeof value === "function") {
