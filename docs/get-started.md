@@ -3,15 +3,15 @@
 ::: code-group
 
 ```sh [npm]
-npm install reactx
+npm install reactx@alpha
 ```
 
 ```sh [yarn]
-yarn add reactx
+yarn add reactx@alpha
 ```
 
 ```sh [pnpm]
-pnpm add reactx
+pnpm add reactx@alpha
 ```
 
 :::
@@ -68,3 +68,17 @@ export default defineConfig({
 ```
 
 :::
+
+## Devtools
+
+Run the ReactX devtools with `npx reactx`. This will start an Electron app that you can connect to.
+
+When you create the reactive bridge to React, you can configure development mode by:
+
+```ts
+// This connects to the default port of the Devtools
+const state = reactive(new State(), true);
+
+// Define a custom host and port for the Devtools
+const state = reactive(new State(), "localhost:4041");
+```

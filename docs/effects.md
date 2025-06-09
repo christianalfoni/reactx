@@ -1,8 +1,8 @@
-# Environment Dependencies
+# Effects
 
 Applications run in an environment, typically the browser. You might need to use certain APIs from the environment, for example `localStorage`. The application also typically uses certain 3rd party libraries, for example you use `firebase` for persistence. Your application and its code does not really care about `localStorage` or `firebase`, it only cares about persistence.
 
-Creating an environment interface for your application is a pattern that can clean up your implementation by removing terminology and abstractions that is unrelated to the application itself (like `localStorage` or `firebase`). Additionally you will often avoid adding explicit types in your application code.
+Creating an effects interface for your application is a pattern that can clean up your implementation by removing terminology and abstractions that is unrelated to the application itself (like `localStorage` or `firebase`). Additionally you will often avoid adding explicit types in your application code.
 
 The pattern also increases testability as you do not have to mock the environment the tests run in, you rather mock your environment interface.
 
@@ -17,7 +17,7 @@ class LocalPeristence {
   }
 }
 
-class Environment {
+class Effects {
   localPersistence: LocalPeristence;
   constructor({ namespace }: { namespace: string }) {
     this.localPersistence = new LocalPeristence(namespace);
@@ -26,18 +26,18 @@ class Environment {
 
 class CounterState {
   count = 0;
-  constructor(private localPersistence: LocalPeristence) {}
+  constructor(private effects: Effects) {}
   get count() {
-    return this.localPersistence.get("count") || 0;
+    return this.effects.localPersistence.get("count") || 0;
   }
   increase() {
     this.count++;
-    this.localPersistence.set("count", this.count);
+    this.effects.localPersistence.set("count", this.count);
   }
 }
 
-const environment = new Environment({ namespace: "my-app" });
-const counter = new CounterState(environment.localPersistence);
+const effects = new Effects({ namespace: "my-app" });
+const counter = new CounterState(effects);
 ```
 
 ## Multiple environments
@@ -50,7 +50,7 @@ export interface LocalPersistence {
   set<T>(key: string, value: T): Promise<void>;
 }
 
-export interface Environment {
+export interface Effects {
   localPersistence: LocalPersistence;
 }
 ```
@@ -69,7 +69,7 @@ export class BrowserLocalPersistence implements LocalPersistence {
   }
 }
 
-export class BrowserEnvironment {
+export class BrowserEffects {
   localPersistence = new BrowserLocalPersistence();
 }
 ```
@@ -90,7 +90,7 @@ export class NativeLocalPersistence implements LocalPersistence {
   }
 }
 
-export class NativeEnvironment {
+export class NativeEffects {
   localPersistence = new NativeLocalPersistence();
 }
 ```

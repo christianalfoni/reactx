@@ -35,8 +35,8 @@ export default defineConfig({
           },
           { text: "Multiple UX", link: "/multiple-ux" },
           {
-            text: "Environment dependencies",
-            link: "/environment-dependencies",
+            text: "Effects",
+            link: "/effects",
           },
         ],
       },

@@ -16,7 +16,8 @@
     "doc": "docs"
   },
   "files": [
-    "dist"
+    "dist",
+    "bin.js"
   ],
   "module": "./dist/esm/index.js",
   "main": "./dist/esm/index.js",
@@ -67,7 +68,7 @@
     "babel-plugin-observing-components": "^0.2.0",
     "mobx": "^6.13.7",
     "mobx-react-lite": "^4.1.0",
-    "overmind-devtools": "^29.2.0-1748083456236",
+    "overmind-devtools": "^29.2.0-1749482703647",
     "react": "^19.0.0",
     "swc-plugin-observing-components": "^0.2.0"
   },
