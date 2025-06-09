@@ -2,45 +2,10 @@
 
 When you have state that components dynamically access by reading it, you can use a subscription to control any side effects. An example of this could be the current page.
 
-::: code-group
-
-```ts [Functional]
-function Dashboard(env: Environment) {
-  const state = reactive({
-    statistics: [] as DashboardStatistics[],
-    subscribe,
-  });
-
-  return state;
-
-  function subscribe() {
-    const disposeDashboardStatistics =
-      env.persistence.subscribeDashboardStatistics((stats) => {
-        state.statistics = stats;
-      });
-
-    return () => {
-      disposeDashboardStatistics();
-    };
-  }
-}
-
-function State(env: Environment) {
-  const state = reactive({
-    dashboard: Dashboard(env),
-    settings: Settings(env),
-  });
-
-  return reactive.readonly(state);
-}
-```
-
-```ts [Object Oriented]
+```ts
 class Dashboard {
-  constructor(private env: Environment) {
-    reactive(this);
-  }
   statistics: DashboardStatistics[] = [];
+  constructor(private env: Environment) {}
   subscribe() {
     const disposeDashboardStatistics =
       this.env.persistence.subscribeDashboardStatistics((stats) => {
@@ -54,15 +19,14 @@ class Dashboard {
 }
 
 class State {
-  constructor(private env: Environment) {
-    reactive(this);
+  dashboard: Dashboard;
+  settings: Settings;
+  constructor(env: Environment) {
+    this.dashboard = new Dashboard(env);
+    this.settings = new Settings(env);
   }
-  dashboard = new Dashboard(this.env);
-  settings = new Settings(this.env);
 }
 ```
-
-:::
 
 And in your dashboard component:
 

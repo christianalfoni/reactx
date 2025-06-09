@@ -6,57 +6,7 @@ Creating an environment interface for your application is a pattern that can cle
 
 The pattern also increases testability as you do not have to mock the environment the tests run in, you rather mock your environment interface.
 
-::: code-group
-
-```tsx [Functional]
-function LocalPeristence(namespace: string) {
-  return {
-    set,
-    get,
-  };
-
-  function createKey(key) {
-    return `${namespace}.${key}`;
-  }
-
-  function set(key, value) {
-    localStorage.setItem(createKey(key), JSON.stringify(value));
-  }
-
-  function get(key) {
-    return JSON.parse(localStorage.getItem(createKey(key)));
-  }
-}
-
-function Environment({ namespace }: { namespace: string }) {
-  return {
-    localPersistence: LocalPeristence(namespace),
-  };
-}
-
-function CounterState({ localPersistence }) {
-  const state = reactive({
-    count: localPersistence.get("count") || 0,
-  });
-
-  return {
-    get count() {
-      return state.count;
-    },
-    increase,
-  };
-
-  function increase() {
-    state.count++;
-    localPersistence.set("count", state.count);
-  }
-}
-
-const environment = Environment({ namespace: "my-app" });
-const counter = CounterState(environment);
-```
-
-```tsx [Object Oriented]
+```tsx
 class LocalPeristence {
   constructor(private namespace: string) {}
   set(key: string, value: any) {
@@ -76,9 +26,7 @@ class Environment {
 
 class CounterState {
   count = 0;
-  constructor(private localPersistence: LocalPeristence) {
-    reactive(this);
-  }
+  constructor(private localPersistence: LocalPeristence) {}
   get count() {
     return this.localPersistence.get("count") || 0;
   }
@@ -91,8 +39,6 @@ class CounterState {
 const environment = new Environment({ namespace: "my-app" });
 const counter = new CounterState(environment.localPersistence);
 ```
-
-:::
 
 ## Multiple environments
 
@@ -111,34 +57,7 @@ export interface Environment {
 
 **Browser implementation**
 
-::: code-group
-
-```ts [Functional]
-import { LocalPersistence } from "../interface";
-
-export function BrowserLocalPersistence(): LocalPersistence {
-  return {
-    set,
-    get,
-  };
-
-  async function set(key, value) {
-    localStorage.setItem(key, JSON.stringify(value));
-  }
-
-  async function get(key) {
-    return JSON.parse(localStorage.getItem(key));
-  }
-}
-
-export function BrowserEnvironment() {
-  return {
-    localPersistence: BrowserLocalPersistence(),
-  };
-}
-```
-
-```ts [Object Oriented]
+```ts
 import { LocalPersistence } from "../interface";
 
 export class BrowserLocalPersistence implements LocalPersistence {
@@ -155,40 +74,9 @@ export class BrowserEnvironment {
 }
 ```
 
-:::
-
 **Native implementation**
 
-::: code-group
-
-```ts [Functional]
-import { LocalPersistence } from "../interface";
-
-export function NativeLocalPersistence(): LocalPersistence {
-  return {
-    set,
-    get,
-  };
-
-  async function set(key, value) {
-    await AsyncStorage.setItem(key, JSON.stringify(value));
-  }
-
-  async function get(key) {
-    const value = await AsyncStorage.getItem(key);
-
-    return value ? JSON.parse(value) : undefined;
-  }
-}
-
-export function NativeEnvironment() {
-  return {
-    localPersistence: NativeLocalPersistence(),
-  };
-}
-```
-
-```ts [Object Oriented]
+```ts
 import { LocalPersistence } from "../interface";
 
 export class NativeLocalPersistence implements LocalPersistence {
@@ -206,5 +94,3 @@ export class NativeEnvironment {
   localPersistence = new NativeLocalPersistence();
 }
 ```
-
-:::

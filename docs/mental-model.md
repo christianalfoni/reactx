@@ -17,4 +17,6 @@ At a point it is better to separate state management from your UI components:
 ![Separate State Management](./ui-3.png){width=250px .light-only}
 ![Separate State Management Dark Mode](./ui-3-dark.png){width=250px .dark-only}
 
-This separation results in a clearer, simpler UI component tree and a more manageable and organized state. By leveraging **MobX Lite** for external state management and **React** for your UI, you ensure that each tool focuses on its strength—MobX Lite effectively manages state and data complexity, while React excels in crafting intuitive, responsive user interfaces.
+This separation results in a clearer, simpler UI component tree and a more manageable and organized state. Context is the "React way" of achieving this separation, where **ReactX** gives you an object oriented "just code" way of achieving this separation.
+
+By leveraging **ReactX** for external state management and **React** for your UI, you ensure that each tool focuses on its strength—ReactX effectively manages state and data complexity, while React excels in crafting intuitive, responsive user interfaces.

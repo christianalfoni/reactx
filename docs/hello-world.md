@@ -1,24 +1,17 @@
 # Hello World
 
-::: code-group
+```tsx
+import { reactive } from "reactx";
 
-```tsx [Functional]
-import { reactive } from "mobx-lite";
-
-function CounterState() {
-  const state = reactive({
-    count: 0,
-    increase,
-  });
-
-  return state;
-
-  function increase() {
-    state.count++;
+class CounterState {
+  count = 0;
+  increase() {
+    this.count++;
   }
 }
 
-const counter = CounterState();
+// Expose state to React with `reactive`
+const counter = reactive(new CounterState());
 
 function Counter() {
   return (
@@ -30,29 +23,9 @@ function Counter() {
 }
 ```
 
-```tsx [Object Oriented]
-import { reactive } from "mobx-lite";
+`reactive` is only called once, where you provide your root state to React, however you choose to expose it. It will:
 
-export class CounterState {
-  count = 0;
-  constructor() {
-    reactive(this);
-  }
-  increase() {
-    this.count++;
-  }
-}
-
-const counter = new CounterState();
-
-function Counter() {
-  return (
-    <div>
-      <span>{counter.count}</span>
-      <button onClick={() => counter.increase()}>Increase</button>
-    </div>
-  );
-}
-```
-
-:::
+- Lazily enhance your state management to be reactive, where needed
+- Prevent direct state mutation from React
+- Bind methods accessed to the class instance
+- Enable the visualization of your app and interactions in the devtools

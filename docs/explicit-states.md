@@ -44,52 +44,10 @@ Normally a finite state machine is implemented with a dispatcher type of concept
 
 By simply using a pattern we can resolve this:
 
-::: code-group
-
-```ts [Functional]
-import { reactive } from "mobx-lite";
-
-function CounterState() {
-  const state = reactive({
-    state: IDLE() as ReturnType<typeof IDLE> | ReturnType<typeof COUNTING>,
-    count: 0,
-  });
-
-  return state;
-
-  function IDLE() {
-    return {
-      current: "IDLE" as const,
-      start() {
-        state.state = COUNTING();
-      },
-    };
-  }
-
-  function COUNTING() {
-    const interval = setInterval(() => {
-      state.count++;
-    }, 1000);
-
-    return {
-      current: "COUNTING" as const,
-      stop() {
-        clearInterval(interval);
-        state.state = IDLE();
-      },
-    };
-  }
-}
-```
-
-```ts [Object Oriented]
-import { reactive } from "mobx-lite";
-
+```ts
 class IDLE {
   readonly current = "IDLE";
-  constructor(private counter: CounterState) {
-    reactive(this);
-  }
+  constructor(private counter: CounterState) {}
   start() {
     this.counter.state = new COUNTING(this.counter);
   }
@@ -99,7 +57,6 @@ class COUNTING {
   readonly current = "COUNTING";
   private interval: number;
   constructor(private counter: CounterState) {
-    reactive(this);
     this.interval = setInterval(() => {
       this.counter.count++;
     }, 1000);
@@ -111,13 +68,7 @@ class COUNTING {
 }
 
 class CounterState {
-  state: IDLE | COUNTING;
+  state: IDLE | COUNTING = new IDLE(this);
   count = 0;
-  constructor() {
-    reactive(this);
-    this.state = new IDLE(this);
-  }
 }
 ```
-
-:::

@@ -1,22 +1,22 @@
-# Mobx Lite
+# ReactX
 
-> Mobx reimagined
+> Transparent reactive state management
 
 ## Get Started
 
 ```sh
-npm install mobx-lite
+npm install reactx@alpha
 ```
 
 Automatic observation in components using [observing-components](https://github.com/christianalfoni/observing-components).
 
 ```ts
-import babelPlugin from "mobx-lite/babel-plugin";
-import swcPlugin from "mobx-lite/swc-plugin";
+import babelPlugin from "reactx/babel-plugin";
+import swcPlugin from "reactx/swc-plugin";
 ```
 
 ```tsx
-import { reactive } from "mobx-lite";
+import { reactive } from "reactx";
 
 const state = reactive({
   count: 0,

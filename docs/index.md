@@ -3,8 +3,8 @@
 layout: home
 
 hero:
-  name: "Mobx Lite"
-  text: "Mobx Reimagined"
+  name: "ReactX"
+  text: "Transparent reactivity"
   tagline: Managing state and data in rich client applications
   actions:
     - theme: brand
@@ -15,10 +15,10 @@ hero:
       link: /api/reactive
 
 features:
-  - title: Functional or Object Oriented
-    details: Choose your paradigm. Write state management more like you express components or use traditional classes
-  - title: Simple
-    details: A single primitive, transparent observation and patterns that help you organise and structure your state management
-  - title: Clear mental model
-    details: Untangle state management from your components and get a clear separation of state and deriving a UI from that state
+  - title: Best of both worlds
+    details: Object oriented state management with functional UI components
+  - title: Transparent reactivity
+    details: Just write state management and UI code, free from reactivity boilerplate
+  - title: Data Management
+    details: Query and mutation utilities for modern data management with React
 ---

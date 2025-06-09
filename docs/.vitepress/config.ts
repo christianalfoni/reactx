@@ -17,8 +17,6 @@ export default defineConfig({
           { text: "Get Started", link: "/get-started" },
           { text: "Hello World", link: "/hello-world" },
           { text: "Mental Model", link: "/mental-model" },
-          { text: "Reimagined", link: "/reimagined" },
-          { text: "Functions VS Classes", link: "/functions-vs-classes" },
         ],
       },
       {
@@ -28,22 +26,13 @@ export default defineConfig({
             text: "Creating state",
             link: "/creating-state",
           },
-          {
-            text: "Protected state",
-            link: "/protected-state",
-          },
-          {
-            text: "Nested state",
-            link: "/nested-state",
-          },
+          { text: "Data queries", link: "/data-queries" },
+          { text: "Data mutations", link: "/data-mutations" },
+          { text: "Subscriptions", link: "/subscriptions" },
           {
             text: "Explicit states",
             link: "/explicit-states",
           },
-
-          { text: "Data queries", link: "/data-queries" },
-          { text: "Data mutations", link: "/data-mutations" },
-          { text: "Subscriptions", link: "/subscriptions" },
           { text: "Multiple UX", link: "/multiple-ux" },
           {
             text: "Environment dependencies",
@@ -52,18 +41,11 @@ export default defineConfig({
         ],
       },
       {
-        text: "Api",
+        text: "API",
         items: [
-          {
-            text: "reactive",
-            link: "/api/reactive",
-          },
-          {
-            text: "reactive.readonly",
-            link: "/api/readonly",
-          },
-          { text: "reactive.query", link: "/api/query" },
-          { text: "reactive.mutation", link: "/api/mutation" },
+          { text: "reactive", link: "/api/reactive" },
+          { text: "query", link: "/api/query" },
+          { text: "mutation", link: "/api/mutation" },
         ],
       },
     ],

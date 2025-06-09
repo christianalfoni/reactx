@@ -1,15 +1,15 @@
 {
-  "name": "mobx-lite",
-  "version": "0.1.15",
-  "description": "Managing state and data in rich client applications",
+  "name": "reactx",
+  "version": "1.0.0-alpha.1",
+  "description": "Transparent reactive state management",
+  "bin": {
+    "reactx": "./bin.js"
+  },
   "keywords": [
     "state",
     "management",
     "react",
-    "redux",
-    "mobx",
-    "context",
-    "hooks"
+    "mobx"
   ],
   "author": "Christian Alfoni",
   "directories": {
@@ -67,6 +67,7 @@
     "babel-plugin-observing-components": "^0.2.0",
     "mobx": "^6.13.7",
     "mobx-react-lite": "^4.1.0",
+    "overmind-devtools": "^29.2.0-1748083456236",
     "react": "^19.0.0",
     "swc-plugin-observing-components": "^0.2.0"
   },
