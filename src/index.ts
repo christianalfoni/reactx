@@ -17,3 +17,7 @@ export { query } from "./query";
 export type { Query } from "./query";
 export { mutation } from "./mutation";
 export type { Mutation } from "./mutation";
+
+// Export observer types for custom implementations
+export type { ReactiveObserver, ReactiveEvent } from "./events";
+export type { ReactiveOptions } from "./proxy";

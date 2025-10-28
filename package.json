@@ -28,6 +28,11 @@
       "types": "./dist/esm/index.d.ts",
       "require": "./dist/cjs/index.cjs"
     },
+    "./devtools": {
+      "import": "./dist/esm/devtools.js",
+      "types": "./dist/esm/devtools.d.ts",
+      "require": "./dist/cjs/devtools.cjs"
+    },
     "./babel-plugin": {
       "import": "./dist/esm/babel-plugin.js",
       "types": "./dist/esm/babel-plugin.d.ts",

@@ -11,9 +11,7 @@ import {
   isCustomClassInstance,
   PROXY_TARGET,
 } from "./common";
-import { Devtools } from "./Devtool";
-
-let devtools: Devtools | undefined;
+import { ReactiveObserver } from "./events";
 
 const proxyCache = new WeakMap<any, any>();
 
@@ -33,7 +31,7 @@ const mutatingArrayMethods = [
 /**
  * Creates a proxy for an array with reactive behavior
  */
-function createArrayProxy(target: any[], path: string[]) {
+function createArrayProxy(target: any[], path: string[], observer?: ReactiveObserver) {
   const baseHandler = createBaseProxyHandler(target);
 
   return new Proxy(
@@ -62,7 +60,7 @@ function createArrayProxy(target: any[], path: string[]) {
         }
 
         // Recursively create proxies for nested objects
-        return createProxy(result);
+        return createProxy(result, [], observer);
       },
     }
   );
@@ -78,6 +76,7 @@ function createObjectMutationProxy(
     actionId: string;
     actionName: string;
     operatorId: number;
+    observer?: ReactiveObserver;
   }
 ) {
   if (
@@ -103,6 +102,7 @@ function createObjectMutationProxy(
           key as string,
           result,
           options.path,
+          options.observer,
           options
         );
       }
@@ -145,8 +145,8 @@ function createObjectMutationProxy(
 
       descriptor.set.call(target, value);
       pendingMutations.push(options.path.concat(key as string).join("."));
-      devtools?.send({
-        type: "mutations",
+      options.observer?.onEvent({
+        type: "mutation",
         data: {
           actionId: options.actionId,
           executionId: options.executionId,
@@ -158,7 +158,7 @@ function createObjectMutationProxy(
               delimiter: ".",
               path: options.path.concat(key as string).join("."),
               args: [value],
-              // We update by obsercation
+              // We update by observation
               hasChangedValue: false,
             },
           ],
@@ -172,7 +172,7 @@ function createObjectMutationProxy(
 /**
  * Creates a proxy for an object with reactive behavior
  */
-function createObjectProxy(target: object, path: string[]) {
+function createObjectProxy(target: object, path: string[], observer?: ReactiveObserver) {
   const baseHandler = createBaseProxyHandler(target);
   const isCustomClass = isCustomClassInstance(target);
   const baseTarget = isObservable(target)
@@ -199,7 +199,7 @@ function createObjectProxy(target: object, path: string[]) {
         }
 
         if (observedKeys.has(key)) {
-          return createProxy(Reflect.get(target, key), path.concat(key));
+          return createProxy(Reflect.get(target, key), path.concat(key), observer);
         }
 
         const descriptor = Object.getOwnPropertyDescriptor(
@@ -210,7 +210,7 @@ function createObjectProxy(target: object, path: string[]) {
         observedKeys.add(key);
 
         if (descriptor && descriptor.get && !descriptor.set) {
-          const computedProxy = createProxy(baseTarget, path.concat(key));
+          const computedProxy = createProxy(baseTarget, path.concat(key), observer);
           const getter = descriptor.get;
 
           let updateCount = 0;
@@ -218,7 +218,7 @@ function createObjectProxy(target: object, path: string[]) {
           const computedValue = computed(() => {
             const val = getter.call(computedProxy);
 
-            devtools?.send({
+            observer?.onEvent({
               type: "derived",
               data: {
                 path: path.concat(key),
@@ -244,14 +244,15 @@ function createObjectProxy(target: object, path: string[]) {
 
         const result = Reflect.get(target, key);
 
-        if (devtools && typeof result === "function") {
+        if (observer && typeof result === "function") {
           return (
             boundMethods[key] ||
             (boundMethods[key] = createActionProxy(
               baseTarget,
               key,
               result,
-              path
+              path,
+              observer
             ))
           );
         }
@@ -270,11 +271,9 @@ function createObjectProxy(target: object, path: string[]) {
         });
 
         let value = boxedValue.get();
-        const proxyValue = createProxy(value, path.concat(key));
+        const proxyValue = createProxy(value, path.concat(key), observer);
 
-        if (devtools) {
-          const devtoolsInstance = devtools;
-
+        if (observer) {
           let isFirstRun = true;
 
           autorun(() => {
@@ -302,7 +301,7 @@ function createObjectProxy(target: object, path: string[]) {
               return;
             }
 
-            devtoolsInstance.send({
+            observer.onEvent({
               type: "state",
               data: {
                 path: statePath,
@@ -338,14 +337,15 @@ function createObjectProxy(target: object, path: string[]) {
       }
 
       // Recursively create proxies for nested objects
-      return createProxy(result, path.concat(key));
+      return createProxy(result, path.concat(key), observer);
     },
   });
 }
 
 export function createProxy<T extends Record<string, any>>(
   target: T,
-  path: string[] = []
+  path: string[] = [],
+  observer?: ReactiveObserver
 ): T {
   if (
     target === null ||
@@ -367,8 +367,8 @@ export function createProxy<T extends Record<string, any>>(
 
   // Create appropriate proxy based on target type
   const proxy = Array.isArray(unwrappedTarget)
-    ? createArrayProxy(unwrappedTarget, path)
-    : createObjectProxy(unwrappedTarget, path);
+    ? createArrayProxy(unwrappedTarget, path, observer)
+    : createObjectProxy(unwrappedTarget, path, observer);
 
   // Cache the proxy for future reuse
   proxyCache.set(unwrappedTarget, proxy);
@@ -377,41 +377,14 @@ export function createProxy<T extends Record<string, any>>(
 }
 
 export interface ReactiveOptions {
-  devtools?: boolean | string;
+  observer?: ReactiveObserver;
 }
 
 export function reactive<T extends Record<string, any>>(
   target: T,
   options: ReactiveOptions = {}
 ) {
-  if (options.devtools) {
-    devtools = new Devtools("reactx");
-
-    devtools.connect(
-      typeof options.devtools === "string" ? options.devtools : "localhost:3031",
-      () => {
-        // TODO: Take state change messages and change internal state
-      }
-    );
-
-    devtools.send({
-      type: "init",
-      data: {
-        state: {},
-        actions: {},
-        delimiter: ".",
-        features: {
-          charts: false,
-          transitions: false,
-          components: false,
-          flushes: false,
-          runActions: false,
-        },
-      },
-    });
-  }
-
-  return createProxy(target);
+  return createProxy(target, [], options.observer);
 }
 
 /**
@@ -428,6 +401,7 @@ function createEffectsProxy(
     actionName: string;
     executionId: string;
     operatorId: number;
+    observer?: ReactiveObserver;
   }
 ) {
   return new Proxy(target, {
@@ -439,7 +413,7 @@ function createEffectsProxy(
         return (...args: any[]) => {
           const funcResult = result.call(target, ...args);
 
-          devtools!.send({
+          execution.observer?.onEvent({
             type: "effect",
             data: {
               effectId,
@@ -469,6 +443,7 @@ function createActionProxy(
   key: string,
   func: Function,
   path: string[],
+  observer?: ReactiveObserver,
   parentExecution?: { operatorId: number }
 ) {
   const actionId = `action-${currentActionId++}`;
@@ -485,8 +460,9 @@ function createActionProxy(
         actionId,
         actionName,
         operatorId,
+        observer,
       });
-      devtools!.send({
+      observer?.onEvent({
         type: "action:start",
         data: {
           actionId,
@@ -497,7 +473,7 @@ function createActionProxy(
           value: args,
         },
       });
-      devtools!.send({
+      observer?.onEvent({
         type: "operator:start",
         data: {
           actionId,
@@ -514,7 +490,7 @@ function createActionProxy(
       if (result instanceof Promise) {
         result
           .then(() => {
-            devtools!.send({
+            observer?.onEvent({
               type: "operator:end",
               data: {
                 actionId,
@@ -523,7 +499,7 @@ function createActionProxy(
                 isAsync: true,
               },
             });
-            devtools!.send({
+            observer?.onEvent({
               type: "action:end",
               data: {
                 actionId,
@@ -532,7 +508,7 @@ function createActionProxy(
             });
           })
           .catch((error) => {
-            devtools!.send({
+            observer?.onEvent({
               type: "operator:end",
               data: {
                 actionId,
@@ -542,7 +518,7 @@ function createActionProxy(
                 error,
               },
             });
-            devtools!.send({
+            observer?.onEvent({
               type: "action:end",
               data: {
                 actionId,
@@ -551,7 +527,7 @@ function createActionProxy(
             });
           });
       } else {
-        devtools!.send({
+        observer?.onEvent({
           type: "operator:end",
           data: {
             actionId,
@@ -560,7 +536,7 @@ function createActionProxy(
             isAsync: false,
           },
         });
-        devtools!.send({
+        observer?.onEvent({
           type: "action:end",
           data: {
             actionId,
@@ -583,6 +559,7 @@ function createArrayDevtoolsProxy(
     actionName: string;
     actionId: string;
     operatorId: number;
+    observer?: ReactiveObserver;
   }
 ) {
   return new Proxy(target, {
@@ -598,8 +575,8 @@ function createArrayDevtoolsProxy(
       if (mutatingArrayMethods.includes(key as string)) {
         return (...args: []) => {
           const val = result.call(target, ...args);
-          devtools!.send({
-            type: "mutations",
+          options.observer?.onEvent({
+            type: "mutation",
             data: {
               actionId: options.actionId,
               executionId: options.executionId,
