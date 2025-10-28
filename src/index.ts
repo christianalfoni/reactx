@@ -6,8 +6,13 @@ configure({
   enforceActions: "never",
 });
 
-export { createImmutableProxy as immutableReactive } from "./immutableProxy";
-export { reactive } from "./proxy";
+import { reactive as reactiveImpl } from "./proxy";
+import { createImmutableProxy } from "./immutableProxy";
+
+export const reactive = Object.assign(reactiveImpl, {
+  immutable: createImmutableProxy,
+});
+
 export { query } from "./query";
 export type { Query } from "./query";
 export { mutation } from "./mutation";

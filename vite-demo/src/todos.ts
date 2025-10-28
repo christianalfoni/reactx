@@ -1,4 +1,4 @@
-import { mutation, query } from "mobx-lite";
+import { mutation, query } from "reactx";
 
 let nextTodosData = ["Learn React", "Learn MobX", "Learn Vite"];
 

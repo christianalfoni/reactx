@@ -258,8 +258,6 @@ function createObjectProxy(target: object, path: string[]) {
 
         const boxedValue = observable.box(result);
 
-        console.log("WTF, key", key);
-
         Object.defineProperty(baseTarget, key, {
           configurable: true,
           enumerable: true,
@@ -267,7 +265,6 @@ function createObjectProxy(target: object, path: string[]) {
             return boxedValue.get();
           },
           set(v) {
-            console.log("SETTING VALUE", key, v);
             boxedValue.set(v);
           },
         });
@@ -379,15 +376,19 @@ export function createProxy<T extends Record<string, any>>(
   return proxy;
 }
 
+export interface ReactiveOptions {
+  devtools?: boolean | string;
+}
+
 export function reactive<T extends Record<string, any>>(
   target: T,
-  development: boolean | string = false
+  options: ReactiveOptions = {}
 ) {
-  if (development) {
+  if (options.devtools) {
     devtools = new Devtools("reactx");
 
     devtools.connect(
-      typeof development === "string" ? development : "localhost:3031",
+      typeof options.devtools === "string" ? options.devtools : "localhost:3031",
       () => {
         // TODO: Take state change messages and change internal state
       }
@@ -485,7 +486,6 @@ function createActionProxy(
         actionName,
         operatorId,
       });
-      console.log("ACTION", key, path);
       devtools!.send({
         type: "action:start",
         data: {
