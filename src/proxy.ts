@@ -31,7 +31,11 @@ const mutatingArrayMethods = [
 /**
  * Creates a proxy for an array with reactive behavior
  */
-function createArrayProxy(target: any[], path: string[], observer?: ReactiveObserver) {
+function createArrayProxy(
+  target: any[],
+  path: string[],
+  observer?: ReactiveObserver
+) {
   const baseHandler = createBaseProxyHandler(target);
 
   return new Proxy(
@@ -172,7 +176,11 @@ function createObjectMutationProxy(
 /**
  * Creates a proxy for an object with reactive behavior
  */
-function createObjectProxy(target: object, path: string[], observer?: ReactiveObserver) {
+function createObjectProxy(
+  target: object,
+  path: string[],
+  observer?: ReactiveObserver
+) {
   const baseHandler = createBaseProxyHandler(target);
   const isCustomClass = isCustomClassInstance(target);
   const baseTarget = isObservable(target)
@@ -199,7 +207,11 @@ function createObjectProxy(target: object, path: string[], observer?: ReactiveOb
         }
 
         if (observedKeys.has(key)) {
-          return createProxy(Reflect.get(target, key), path.concat(key), observer);
+          return createProxy(
+            Reflect.get(target, key),
+            path.concat(key),
+            observer
+          );
         }
 
         const descriptor = Object.getOwnPropertyDescriptor(
@@ -210,7 +222,11 @@ function createObjectProxy(target: object, path: string[], observer?: ReactiveOb
         observedKeys.add(key);
 
         if (descriptor && descriptor.get && !descriptor.set) {
-          const computedProxy = createProxy(baseTarget, path.concat(key), observer);
+          const computedProxy = createProxy(
+            baseTarget,
+            path.concat(key),
+            observer
+          );
           const getter = descriptor.get;
 
           let updateCount = 0;
@@ -244,7 +260,7 @@ function createObjectProxy(target: object, path: string[], observer?: ReactiveOb
 
         const result = Reflect.get(target, key);
 
-        if (observer && typeof result === "function") {
+        if (typeof result === "function") {
           return (
             boundMethods[key] ||
             (boundMethods[key] = createActionProxy(

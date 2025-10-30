@@ -19,7 +19,7 @@ npm install reactx@alpha
 Define your application state as a class:
 
 ```typescript
-import { reactive } from 'reactx';
+import { reactive } from "reactx";
 
 class AppState {
   count = 0;
@@ -46,26 +46,26 @@ export default function App({ state }: { state: AppState }) {
     <div>
       <h1>Count: {state.count}</h1>
       <h2>Doubled: {state.doubled}</h2>
-      <button onClick={() => state.increment()}>
-        Increment
-      </button>
+      <button onClick={() => state.increment()}>Increment</button>
     </div>
   );
 }
 
 // Or using React Context
-import { createContext, useContext } from 'react';
+import { createContext, useContext } from "react";
 
 const StateContext = createContext<AppState | null>(null);
 
 export function StateProvider({ children }: { children: React.ReactNode }) {
   const state = reactive(new AppState());
-  return <StateContext.Provider value={state}>{children}</StateContext.Provider>;
+  return (
+    <StateContext.Provider value={state}>{children}</StateContext.Provider>
+  );
 }
 
 export function useAppState() {
   const state = useContext(StateContext);
-  if (!state) throw new Error('useAppState must be used within StateProvider');
+  if (!state) throw new Error("useAppState must be used within StateProvider");
   return state;
 }
 
@@ -80,6 +80,12 @@ That's it. No useState, useReducer, or other state management hooks. Your compon
 
 **Note**: Methods are automatically bound when accessed from React components, so you can safely pass them directly to event handlers without worrying about `this` context.
 
+## AI Instructions
+
+- Use a root class for the application and expose it to the React applications using `const app = reactive(new App())` through props or a context
+- Create classes to organize state domains, entities and utilities/tools/effects
+- Use `query` and `mutation` to handle asynchronous external state and state changes
+
 ## Setup
 
 ReactX requires a babel or swc plugin to automatically wrap your components with reactive observers:
@@ -87,9 +93,9 @@ ReactX requires a babel or swc plugin to automatically wrap your components with
 ### With Vite
 
 ```typescript
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import plugin from 'reactx/babel-plugin';
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import plugin from "reactx/babel-plugin";
 
 export default defineConfig({
   plugins: [
@@ -107,9 +113,7 @@ export default defineConfig({
 ```javascript
 module.exports = {
   experimental: {
-    swcPlugins: [
-      ['reactx/swc-plugin', {}],
-    ],
+    swcPlugins: [["reactx/swc-plugin", {}]],
   },
 };
 ```

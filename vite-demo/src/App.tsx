@@ -8,11 +8,41 @@ type Todo = {
   completed: boolean;
 };
 
+// Generic JSON storage class for localStorage
+class JSONStorage<T> {
+  constructor(private key: string, private defaultValue: T) {}
+
+  load(): T {
+    const stored = localStorage.getItem(this.key);
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (error) {
+        console.error(`Failed to load data from local storage (${this.key}):`, error);
+      }
+    }
+    return this.defaultValue;
+  }
+
+  save(value: T): void {
+    localStorage.setItem(this.key, JSON.stringify(value));
+  }
+
+  clear(): void {
+    localStorage.removeItem(this.key);
+  }
+}
+
 // Reactive state class
 class TodosState {
   todos: Todo[] = [];
   filter: "all" | "active" | "completed" = "all";
   newTodoTitle = "";
+  private storage = new JSONStorage<Todo[]>("reactx-todos", []);
+
+  constructor() {
+    this.todos = this.storage.load();
+  }
 
   addTodo() {
     if (this.newTodoTitle.trim()) {
@@ -22,6 +52,7 @@ class TodosState {
         completed: false,
       });
       this.newTodoTitle = "";
+      this.storage.save(this.todos);
     }
   }
 
@@ -29,11 +60,13 @@ class TodosState {
     const todo = this.todos.find((t) => t.id === id);
     if (todo) {
       todo.completed = !todo.completed;
+      this.storage.save(this.todos);
     }
   }
 
   deleteTodo(id: number) {
     this.todos = this.todos.filter((t) => t.id !== id);
+    this.storage.save(this.todos);
   }
 
   setFilter(filter: "all" | "active" | "completed") {
