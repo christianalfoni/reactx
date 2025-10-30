@@ -2,7 +2,7 @@ import { defineConfig } from "vitepress";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  title: "Mobx Lite",
+  title: "ReactX",
   description: "Mobx Reimagined",
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
