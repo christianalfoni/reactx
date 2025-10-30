@@ -1,111 +1,132 @@
-import { query, reactive } from "reactx";
+import { reactive } from "reactx";
+import "./App.css";
 
-class JSONStorage {
-  constructor(private prefix: string) {}
-  set(key: string, value: unknown) {
-    localStorage.setItem(`${this.prefix}:${key}`, JSON.stringify(value));
-  }
-  get(key: string) {
-    const value = localStorage.getItem(`${this.prefix}:${key}`);
-    return value ? JSON.parse(value) : null;
-  }
-}
-
-type TodoDTO = {
+// Todo type
+type Todo = {
+  id: number;
   title: string;
   completed: boolean;
 };
 
-class State {
-  private storage = new JSONStorage("todos");
-  private todos = query<TodoDTO[]>(() =>
-    Promise.resolve(this.storage.get("list") || [])
-  );
+// Reactive state class
+class TodosState {
+  todos: Todo[] = [];
+  filter: "all" | "active" | "completed" = "all";
   newTodoTitle = "";
-  someArray = [{ mip: "mop" }];
-  filter: "all" | "completed" | "active" = "all";
 
-  constructor() {
-    setTimeout(() => {
-      this.someArray[0].mip = "mop2";
-    }, 1000);
+  addTodo() {
+    if (this.newTodoTitle.trim()) {
+      this.todos.push({
+        id: Date.now(),
+        title: this.newTodoTitle.trim(),
+        completed: false,
+      });
+      this.newTodoTitle = "";
+    }
   }
 
-  get filteredTodos() {
-    return (
-      this.todos.value?.filter((todo) => {
-        if (this.filter === "all") {
-          return true;
-        }
-        if (this.filter === "completed") {
-          return todo.completed;
-        }
-        return !todo.completed;
-      }) || []
-    );
+  toggleTodo(id: number) {
+    const todo = this.todos.find((t) => t.id === id);
+    if (todo) {
+      todo.completed = !todo.completed;
+    }
   }
+
+  deleteTodo(id: number) {
+    this.todos = this.todos.filter((t) => t.id !== id);
+  }
+
+  setFilter(filter: "all" | "active" | "completed") {
+    this.filter = filter;
+  }
+
   setNewTodoTitle(title: string) {
     this.newTodoTitle = title;
   }
-  addTodo() {
-    const todos = this.todos.value?.slice() ?? [];
-    todos.unshift({ title: this.newTodoTitle, completed: false });
-    this.storage.set("list", todos);
-    this.newTodoTitle = "";
-    this.todos.revalidate();
+
+  // Computed values using getters
+  get filteredTodos() {
+    if (this.filter === "active") {
+      return this.todos.filter((t) => !t.completed);
+    }
+    if (this.filter === "completed") {
+      return this.todos.filter((t) => t.completed);
+    }
+    return this.todos;
   }
-  toggleCompleted(index: number) {
-    const todos = this.todos.value?.slice() ?? [];
-    todos[index].completed = !todos[index].completed;
-    this.storage.set("list", todos);
-    this.todos.revalidate();
+
+  get activeCount() {
+    return this.todos.filter((t) => !t.completed).length;
+  }
+
+  get completedCount() {
+    return this.todos.filter((t) => t.completed).length;
   }
 }
 
-const state = reactive(new State(), {
-  devtools: true,
-});
+// Create reactive instance
+const todosState = reactive(new TodosState());
 
-export default function App2() {
+function App() {
   return (
-    <>
-      <h1>Test App</h1>
+    <div className="app">
+      <h1>ReactX Todo App</h1>
 
-      <input
-        value={state.newTodoTitle}
-        onChange={(e) => state.setNewTodoTitle(e.target.value)}
-      />
-      <button onClick={() => state.addTodo()}>
-        Add ({state.someArray[0].mip})
-      </button>
-      <ul>
-        {state.filteredTodos.map((todo, index) => (
-          <li key={index}>
+      <div className="todo-input">
+        <input
+          type="text"
+          value={todosState.newTodoTitle}
+          onChange={(e) => todosState.setNewTodoTitle(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && todosState.addTodo()}
+          placeholder="What needs to be done?"
+        />
+        <button onClick={() => todosState.addTodo()}>Add</button>
+      </div>
+
+      <div className="filters">
+        <button
+          className={todosState.filter === "all" ? "active" : ""}
+          onClick={() => todosState.setFilter("all")}
+        >
+          All ({todosState.todos.length})
+        </button>
+        <button
+          className={todosState.filter === "active" ? "active" : ""}
+          onClick={() => todosState.setFilter("active")}
+        >
+          Active ({todosState.activeCount})
+        </button>
+        <button
+          className={todosState.filter === "completed" ? "active" : ""}
+          onClick={() => todosState.setFilter("completed")}
+        >
+          Completed ({todosState.completedCount})
+        </button>
+      </div>
+
+      <ul className="todo-list">
+        {todosState.filteredTodos.map((todo) => (
+          <li key={todo.id} className={todo.completed ? "completed" : ""}>
             <input
               type="checkbox"
               checked={todo.completed}
-              onChange={() => state.toggleCompleted(index)}
+              onChange={() => todosState.toggleTodo(todo.id)}
             />
-            {todo.title}
+            <span>{todo.title}</span>
+            <button onClick={() => todosState.deleteTodo(todo.id)}>×</button>
           </li>
         ))}
       </ul>
-    </>
+
+      {todosState.filteredTodos.length === 0 && (
+        <p className="empty-message">
+          {todosState.filter === "all"
+            ? "No todos yet. Add one above!"
+            : `No ${todosState.filter} todos.`}
+        </p>
+      )}
+    </div>
   );
 }
 
-/**
-  Overmind 2.0
-  
-  function Namespace() {
-    const state = reactive({
-      count: 0,
-      increase() {
-        state.count++
-      }
-    })
-      
-    return state
-  }
-
- */
+export default App;
