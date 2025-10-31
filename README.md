@@ -85,6 +85,7 @@ That's it. No useState, useReducer, or other state management hooks. Your compon
 - Use a root class for the application and expose it to the React applications using `const app = reactive(new App())` through props or a context
 - Create classes to organize state domains, entities and utilities/tools/effects
 - Use `query` and `mutation` to handle asynchronous external state and state changes
+- Favour creating components where object state can be passed. This creates an optimal observation scope and is a natural separation of state domains
 
 ## Setup
 
