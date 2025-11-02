@@ -48,6 +48,7 @@ export default defineConfig({
           { text: "mutation", link: "/api/mutation" },
           { text: "async", link: "/api/async" },
           { text: "ensure", link: "/api/ensure" },
+          { text: "assign", link: "/api/assign" },
         ],
       },
     ],
