@@ -17,7 +17,6 @@ type IdleInternalState<T> = {
 
 type ActiveInternalState = {
   current: "ACTIVE";
-  abortController: AbortController;
 };
 
 type InternalState<T> = ActiveInternalState | IdleInternalState<T>;
@@ -58,15 +57,14 @@ function createBlockingPromise<T>() {
 }
 
 function executeAsync<T>(async: Async<T>) {
+  // Only execute if still in IDLE state
   if (async[INTERNAL].internalState.current !== "IDLE") {
-    async[INTERNAL].internalState.abortController.abort();
+    return async.promise;
   }
-
-  const abortController = new AbortController();
 
   const observablePromise = createObservablePromise<T>(
     async[INTERNAL].fetcher(),
-    abortController,
+    new AbortController(), // Dummy controller, not used for abort
     (promise) => {
       if (promise.status === "fulfilled") {
         const value = promise.value;
@@ -93,7 +91,6 @@ function executeAsync<T>(async: Async<T>) {
 
   async[INTERNAL].internalState = {
     current: "ACTIVE",
-    abortController,
   };
 
   return observablePromise;

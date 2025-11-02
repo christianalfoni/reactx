@@ -46,6 +46,8 @@ export default defineConfig({
           { text: "reactive", link: "/api/reactive" },
           { text: "query", link: "/api/query" },
           { text: "mutation", link: "/api/mutation" },
+          { text: "async", link: "/api/async" },
+          { text: "ensure", link: "/api/ensure" },
         ],
       },
     ],

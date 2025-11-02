@@ -88,9 +88,9 @@ export function EnsureExample() {
     <div>
       <h2>Ensure Example</h2>
       <p>
-        This example demonstrates <code>ensure()</code>, which memoizes factory functions
-        and caches instances based on parameters. The form state persists even when the
-        component is unmounted and remounted.
+        This example demonstrates <code>ensure()</code>, which creates a singleton instance
+        that persists across component mounts/unmounts. The form state stays alive even when
+        the component is unmounted and remounted.
       </p>
 
       <button

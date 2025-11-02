@@ -1,13 +1,6 @@
 export const ENSURE_SYMBOL = Symbol('reactx.ensure');
 
 /**
- * Compares two parameter arrays for reference equality
- */
-function paramsEqual(a: any[], b: any[]): boolean {
-  return a.length === b.length && a.every((val, idx) => val === b[idx]);
-}
-
-/**
  * Type constraint for values that can be managed by ensure.
  * Requires a dispose method for cleanup.
  */
@@ -22,10 +15,13 @@ type MemoFactory<T extends (...params: any[]) => Disposable> = {
 };
 
 /**
- * Creates a memoized factory function that caches instances based on parameters.
+ * Creates a memoized factory function that caches instances.
  *
- * By default, uses reference equality to compare parameters. Optionally accepts
- * a key function to determine cache keys.
+ * By default (with only factory function), creates a singleton that always returns
+ * the same instance regardless of parameters.
+ *
+ * When a key function is provided, uses it to determine which cached instance to return,
+ * allowing for parameter-based caching.
  *
  * The factory must return a value with a dispose() method for proper cleanup.
  *
@@ -33,13 +29,13 @@ type MemoFactory<T extends (...params: any[]) => Disposable> = {
  * @param getKey - Optional function to extract cache key from parameters
  *
  * @example
- * // Reference-based caching (default)
- * const createService = ensure((config) => new Service(config));
+ * // Singleton (default) - always returns same instance
+ * const ensureDashboard = ensure(() => new DashboardState());
  *
- * // Custom key-based caching
- * const createUser = ensure(
- *   (id) => new User(id),
- *   (id) => id  // Use id as cache key
+ * // Key-based caching - different keys get different instances
+ * const ensureProfile = ensure(
+ *   (userId) => new ProfileState(userId),
+ *   (userId) => userId  // Use userId as cache key
  * );
  */
 export function ensure<T extends (...params: any[]) => Disposable>(
@@ -47,11 +43,11 @@ export function ensure<T extends (...params: any[]) => Disposable>(
   getKey?: (...params: Parameters<T>) => any
 ): MemoFactory<T> {
   const cache = new Map<any, ReturnType<T>>();
-  const paramCache: Array<{ params: any[]; value: ReturnType<T> }> = [];
+  let singletonInstance: ReturnType<T> | undefined;
 
   const memoFactory = ((...params: Parameters<T>): ReturnType<T> => {
     if (getKey) {
-      // Use custom key function
+      // Use custom key function for parameter-based caching
       const key = getKey(...params);
       const existing = cache.get(key);
 
@@ -63,16 +59,11 @@ export function ensure<T extends (...params: any[]) => Disposable>(
       cache.set(key, value);
       return value;
     } else {
-      // Default: reference-based comparison
-      const existing = paramCache.find(entry => paramsEqual(entry.params, params));
-
-      if (existing) {
-        return existing.value;
+      // Default: singleton - always return the same instance
+      if (singletonInstance === undefined) {
+        singletonInstance = factory(...params) as ReturnType<T>;
       }
-
-      const value = factory(...params) as ReturnType<T>;
-      paramCache.push({ params, value });
-      return value;
+      return singletonInstance;
     }
   }) as MemoFactory<T>;
 
@@ -84,10 +75,10 @@ export function ensure<T extends (...params: any[]) => Disposable>(
       }
       cache.clear();
     } else {
-      for (const entry of paramCache) {
-        entry.value.dispose();
+      if (singletonInstance !== undefined) {
+        singletonInstance.dispose();
+        singletonInstance = undefined;
       }
-      paramCache.length = 0;
     }
   };
 
