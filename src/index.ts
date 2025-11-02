@@ -21,7 +21,7 @@ export { async } from "./async";
 export type { Async } from "./async";
 export { ensure, ENSURE_SYMBOL } from "./ensure";
 export type { Disposable } from "./ensure";
-export { assign } from "./assign";
+export { Assign } from "./assign";
 
 // Export observer types and implementations
 export type {
