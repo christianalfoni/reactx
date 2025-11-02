@@ -53,16 +53,16 @@ describe("DevtoolsObserver", () => {
     // Trigger connection
     mockWebSocket.onopen?.();
 
-    // Send a test event
+    // Send a test event (using new event type)
     observer.onEvent({
-      type: "state",
+      type: "property:tracked",
       data: {
         path: ["count"],
         value: 1,
-        isMutation: false,
       },
     });
 
+    // DevtoolsObserver should map it to the old "state" format for Overmind devtools
     const stateMessages = sentMessages.filter((msg) => {
       return msg.message && msg.message.type === "state";
     });
@@ -110,24 +110,22 @@ describe("DevtoolsObserver", () => {
 
     // Send a few representative event types with valid data
     observer.onEvent({
-      type: "state",
-      data: { path: ["test"], value: 1, isMutation: false },
+      type: "property:tracked",
+      data: { path: ["test"], value: 1 },
     });
 
     observer.onEvent({
       type: "action:start",
       data: {
-        actionId: "test-1",
         executionId: "exec-1",
-        actionName: "test",
-        path: [],
-        value: [],
+        path: ["test"],
+        args: [],
       },
     });
 
     observer.onEvent({
       type: "action:end",
-      data: { actionId: "test-1", executionId: "exec-1" },
+      data: { executionId: "exec-1" },
     });
 
     // Should have sent messages for these events
@@ -136,24 +134,46 @@ describe("DevtoolsObserver", () => {
     // Verify the observer doesn't crash with any event type
     expect(() => {
       observer.onEvent({
-        type: "mutation",
-        data: {} as any,
+        type: "property:mutated",
+        data: {
+          executionId: "exec-1",
+          executionPath: ["test"],
+          mutations: [],
+        },
       });
       observer.onEvent({
-        type: "derived",
-        data: {} as any,
+        type: "computed:evaluated",
+        data: {
+          path: ["test"],
+          value: 1,
+          dependencies: [],
+          evaluationCount: 0,
+        },
       });
       observer.onEvent({
-        type: "operator:start",
-        data: {} as any,
+        type: "execution:start",
+        data: {
+          executionId: "exec-1",
+          name: "test",
+          path: ["test"],
+        },
       });
       observer.onEvent({
-        type: "operator:end",
-        data: {} as any,
+        type: "execution:end",
+        data: {
+          executionId: "exec-1",
+          isAsync: false,
+        },
       });
       observer.onEvent({
-        type: "effect",
-        data: {} as any,
+        type: "instance:method",
+        data: {
+          methodName: "test",
+          methodPath: ["test"],
+          args: [],
+          result: null,
+          executionId: "exec-1",
+        },
       });
     }).not.toThrow();
   });
@@ -163,11 +183,10 @@ describe("DevtoolsObserver", () => {
 
     // Don't trigger connection - send messages while disconnected
     observer.onEvent({
-      type: "state",
+      type: "property:tracked",
       data: {
         path: ["count"],
         value: 1,
-        isMutation: false,
       },
     });
 

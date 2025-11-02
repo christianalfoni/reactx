@@ -1,9 +1,5 @@
-import { createRoot } from "react-dom/client";
-import "./index.css";
-import { App } from "./ui";
-
 import { reactive, ConsoleObserver } from "reactx";
-import { TodoState } from "./state";
+import { TodoState } from "./types";
 
 // Create a ConsoleObserver for debugging
 const consoleObserver = new ConsoleObserver({
@@ -17,5 +13,3 @@ todoState.loadFromStorage();
 
 // Make it reactive and export
 export const state = reactive(todoState, { observer: consoleObserver });
-
-createRoot(document.getElementById("root")!).render(<App state={todoState} />);

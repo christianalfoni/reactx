@@ -17,7 +17,24 @@ export { query } from "./query";
 export type { Query } from "./query";
 export { mutation } from "./mutation";
 export type { Mutation } from "./mutation";
+export { async } from "./async";
+export type { Async } from "./async";
+export { ensure, ENSURE_SYMBOL } from "./ensure";
+export type { Disposable } from "./ensure";
 
-// Export observer types for custom implementations
-export type { ReactiveObserver, ReactiveEvent } from "./events";
+// Export observer types and implementations
+export type {
+  ReactiveObserver,
+  ReactiveEvent,
+  PropertyMutationData,
+  PropertyTrackedData,
+  ComputedEvaluatedData,
+  ActionStartData,
+  ActionEndData,
+  ExecutionStartData,
+  ExecutionEndData,
+  InstanceMethodData,
+  InitData,
+} from "./events";
 export type { ReactiveOptions } from "./proxy";
+export { ConsoleObserver } from "./ConsoleObserver";

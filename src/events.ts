@@ -3,76 +3,70 @@
  * These events can be observed by implementing the ReactiveObserver interface.
  */
 
-export interface MutationData {
-  actionId: string;
+export interface PropertyMutationData {
   executionId: string;
-  operatorId: number;
-  actionName?: string;
+  executionPath: string[];
   mutations: Array<{
-    method: string;
-    delimiter: string;
-    path: string;
+    propertyPath: string;
+    operation:
+      | "set"
+      | "push"
+      | "pop"
+      | "shift"
+      | "unshift"
+      | "splice"
+      | "sort"
+      | "reverse";
     args: any[];
-    hasChangedValue: boolean;
   }>;
 }
 
-export interface StateChangeData {
+export interface PropertyTrackedData {
   path: string[];
   value: any;
-  isMutation: boolean;
 }
 
-export interface DerivedData {
+export interface ComputedEvaluatedData {
   path: string[];
-  paths: string[][];
   value: any;
-  updateCount: number;
+  dependencies: string[][];
+  evaluationCount: number;
 }
 
 export interface ActionStartData {
-  actionId: string;
   executionId: string;
-  actionName: string;
   path: string[];
-  parentExecution?: { operatorId: number };
-  value: any[];
+  args: any[];
+  parentExecutionId?: string;
 }
 
 export interface ActionEndData {
-  actionId: string;
   executionId: string;
+  duration?: number;
+  error?: any;
 }
 
-export interface OperatorStartData {
-  actionId: string;
+export interface ExecutionStartData {
   executionId: string;
-  operatorId: number;
   name: string;
   path: string[];
-  type: string;
-  parentExecution?: { operatorId: number };
+  parentExecutionId?: string;
 }
 
-export interface OperatorEndData {
-  actionId: string;
+export interface ExecutionEndData {
   executionId: string;
-  operatorId: number;
+  duration?: number;
   isAsync: boolean;
   error?: any;
 }
 
-export interface EffectData {
-  effectId: number;
-  actionId: string;
-  executionId: string;
-  operatorId: number;
-  method: string | symbol;
+export interface InstanceMethodData {
+  methodName: string;
+  methodPath: string[];
   args: any[];
-  name: string;
   result: any;
-  isPending: boolean;
-  error: any;
+  error?: any;
+  executionId: string;
 }
 
 export interface InitData {
@@ -93,14 +87,14 @@ export interface InitData {
  */
 export type ReactiveEvent =
   | { type: "init"; data: InitData }
-  | { type: "mutation"; data: MutationData }
-  | { type: "state"; data: StateChangeData }
-  | { type: "derived"; data: DerivedData }
+  | { type: "property:mutated"; data: PropertyMutationData }
+  | { type: "property:tracked"; data: PropertyTrackedData }
+  | { type: "computed:evaluated"; data: ComputedEvaluatedData }
   | { type: "action:start"; data: ActionStartData }
   | { type: "action:end"; data: ActionEndData }
-  | { type: "operator:start"; data: OperatorStartData }
-  | { type: "operator:end"; data: OperatorEndData }
-  | { type: "effect"; data: EffectData };
+  | { type: "execution:start"; data: ExecutionStartData }
+  | { type: "execution:end"; data: ExecutionEndData }
+  | { type: "instance:method"; data: InstanceMethodData };
 
 /**
  * Observer interface for reactive events.

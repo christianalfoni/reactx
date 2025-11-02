@@ -12,6 +12,7 @@ import {
   PROXY_TARGET,
 } from "./common";
 import { ReactiveObserver } from "./events";
+import { ENSURE_SYMBOL } from "./ensure";
 
 const proxyCache = new WeakMap<any, any>();
 
@@ -150,20 +151,15 @@ function createObjectMutationProxy(
       descriptor.set.call(target, value);
       pendingMutations.push(options.path.concat(key as string).join("."));
       options.observer?.onEvent({
-        type: "mutation",
+        type: "property:mutated",
         data: {
-          actionId: options.actionId,
           executionId: options.executionId,
-          operatorId: options.operatorId,
-          actionName: options.actionName,
+          executionPath: options.path,
           mutations: [
             {
-              method: "set",
-              delimiter: ".",
-              path: options.path.concat(key as string).join("."),
+              propertyPath: options.path.concat(key as string).join("."),
+              operation: "set",
               args: [value],
-              // We update by observation
-              hasChangedValue: false,
             },
           ],
         },
@@ -229,18 +225,18 @@ function createObjectProxy(
           );
           const getter = descriptor.get;
 
-          let updateCount = 0;
+          let evaluationCount = 0;
 
           const computedValue = computed(() => {
             const val = getter.call(computedProxy);
 
             observer?.onEvent({
-              type: "derived",
+              type: "computed:evaluated",
               data: {
                 path: path.concat(key),
-                paths: [],
+                dependencies: [],
                 value: val,
-                updateCount: updateCount++,
+                evaluationCount: evaluationCount++,
               },
             });
 
@@ -261,6 +257,27 @@ function createObjectProxy(
         const result = Reflect.get(target, key);
 
         if (typeof result === "function") {
+          // Check if this is an ensure function - treat as lazy property, not action
+          if (result[ENSURE_SYMBOL]) {
+            return (
+              boundMethods[key] ||
+              (boundMethods[key] = (...args: any[]) => {
+                const value = result(...args);
+
+                // Track as property access, not action
+                observer?.onEvent({
+                  type: "property:tracked",
+                  data: {
+                    path: path.concat(key),
+                    value,
+                  },
+                });
+
+                return createProxy(value, path.concat(key), observer);
+              })
+            );
+          }
+
           return (
             boundMethods[key] ||
             (boundMethods[key] = createActionProxy(
@@ -318,11 +335,10 @@ function createObjectProxy(
             }
 
             observer.onEvent({
-              type: "state",
+              type: "property:tracked",
               data: {
                 path: statePath,
                 value: newValue,
-                isMutation: !isFirstRun,
               },
             });
 
@@ -407,8 +423,6 @@ export function reactive<T extends Record<string, any>>(
  * DEVTOOL PROXIES
  */
 
-let currentEffectId = 0;
-
 function createEffectsProxy(
   target: any,
   path: string[],
@@ -422,28 +436,31 @@ function createEffectsProxy(
 ) {
   return new Proxy(target, {
     get(_, key) {
-      const effectId = currentEffectId++;
       const result = Reflect.get(target, key);
 
       if (typeof result === "function") {
         return (...args: any[]) => {
-          const funcResult = result.call(target, ...args);
+          let funcResult;
+          let error;
 
-          execution.observer?.onEvent({
-            type: "effect",
-            data: {
-              effectId,
-              actionId: execution.actionId,
-              executionId: execution.executionId,
-              operatorId: execution.operatorId,
-              method: key,
-              args,
-              name: path.join("."),
-              result: funcResult,
-              isPending: false,
-              error: null,
-            },
-          });
+          try {
+            funcResult = result.call(target, ...args);
+          } catch (e) {
+            error = e;
+            throw e;
+          } finally {
+            execution.observer?.onEvent({
+              type: "instance:method",
+              data: {
+                methodName: String(key),
+                methodPath: path,
+                args,
+                result: funcResult,
+                error,
+                executionId: execution.executionId,
+              },
+            });
+          }
 
           return funcResult;
         };
@@ -470,6 +487,11 @@ function createActionProxy(
     apply(_, __, args) {
       const executionId = `execution-${currentExecutionId++}`;
       const operatorId = 0;
+      const startTime = performance.now();
+      const parentExecutionId = parentExecution
+        ? `execution-${parentExecution.operatorId}`
+        : undefined;
+
       const proxy = createObjectMutationProxy(target, {
         path,
         executionId,
@@ -478,58 +500,56 @@ function createActionProxy(
         operatorId,
         observer,
       });
+
       observer?.onEvent({
         type: "action:start",
         data: {
-          actionId,
           executionId,
-          actionName: path.concat(key).join("."),
-          path: path,
-          parentExecution,
-          value: args,
+          path: path.concat(key),
+          args,
+          parentExecutionId,
         },
       });
+
       observer?.onEvent({
-        type: "operator:start",
+        type: "execution:start",
         data: {
-          actionId,
           executionId,
-          operatorId,
-          name: func.name,
-          path: [],
-          type: "action",
-          parentExecution,
+          name: func.name || key,
+          path: path.concat(key),
+          parentExecutionId,
         },
       });
+
       const result = Reflect.apply(func, proxy, args);
 
       if (result instanceof Promise) {
         result
           .then(() => {
+            const duration = performance.now() - startTime;
             observer?.onEvent({
-              type: "operator:end",
+              type: "execution:end",
               data: {
-                actionId,
                 executionId,
-                operatorId,
+                duration,
                 isAsync: true,
               },
             });
             observer?.onEvent({
               type: "action:end",
               data: {
-                actionId,
                 executionId,
+                duration,
               },
             });
           })
           .catch((error) => {
+            const duration = performance.now() - startTime;
             observer?.onEvent({
-              type: "operator:end",
+              type: "execution:end",
               data: {
-                actionId,
                 executionId,
-                operatorId,
+                duration,
                 isAsync: true,
                 error,
               },
@@ -537,26 +557,27 @@ function createActionProxy(
             observer?.onEvent({
               type: "action:end",
               data: {
-                actionId,
                 executionId,
+                duration,
+                error,
               },
             });
           });
       } else {
+        const duration = performance.now() - startTime;
         observer?.onEvent({
-          type: "operator:end",
+          type: "execution:end",
           data: {
-            actionId,
             executionId,
-            operatorId,
+            duration,
             isAsync: false,
           },
         });
         observer?.onEvent({
           type: "action:end",
           data: {
-            actionId,
             executionId,
+            duration,
           },
         });
       }
@@ -592,18 +613,15 @@ function createArrayDevtoolsProxy(
         return (...args: []) => {
           const val = result.call(target, ...args);
           options.observer?.onEvent({
-            type: "mutation",
+            type: "property:mutated",
             data: {
-              actionId: options.actionId,
               executionId: options.executionId,
-              operatorId: options.operatorId,
+              executionPath: options.path,
               mutations: [
                 {
-                  method: key,
-                  delimiter: ".",
-                  path: options.path.concat(parentKey as string).join("."),
+                  propertyPath: options.path.concat(parentKey as string).join("."),
+                  operation: key as any,
                   args,
-                  hasChangedValue: true,
                 },
               ],
             },

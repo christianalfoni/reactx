@@ -383,11 +383,11 @@ describe("reactive - options", () => {
     );
     expect(actionEvents.length).toBeGreaterThan(0);
 
-    // Should have received operator events
-    const operatorEvents = events.filter(
-      (e) => e.type === "operator:start" || e.type === "operator:end"
+    // Should have received execution events (renamed from operator events)
+    const executionEvents = events.filter(
+      (e) => e.type === "execution:start" || e.type === "execution:end"
     );
-    expect(operatorEvents.length).toBeGreaterThan(0);
+    expect(executionEvents.length).toBeGreaterThan(0);
   });
 
   it("works without options", () => {

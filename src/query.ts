@@ -115,20 +115,23 @@ export class Query<T> {
     fetcher: () => Promise<T>;
     subscriptionCount: number;
     internalState: InternalState<T>;
+    lazy: boolean;
   };
 
   private state: QueryState<T>;
 
-  constructor(fetcher: () => Promise<T>) {
+  constructor(fetcher: () => Promise<T>, lazy = false) {
     const blockingPromise = createBlockingPromise<T>();
+    const initialInternalState: IdleInternalState<T> = {
+      current: "IDLE",
+      blockingPromise,
+    };
 
     this[INTERNAL] = {
       fetcher,
       subscriptionCount: 0,
-      internalState: {
-        current: "IDLE",
-        blockingPromise,
-      },
+      lazy,
+      internalState: initialInternalState,
     };
     this.state = observable({
       error: null,
@@ -139,18 +142,17 @@ export class Query<T> {
       promise: createPendingPromise(blockingPromise.promise),
     });
 
-    this.state = observable({
-      error: null,
-      value: null,
-      isRevalidating: false,
-      isFetching: true,
-      // We set a pending blocking promise as we can not set state during render
-      promise: createPendingPromise(blockingPromise.promise),
-    });
+    // If not lazy, execute immediately
+    if (!lazy) {
+      initialInternalState.blockingPromise.resolve(executeQuery(this));
+    }
   }
 
   get error() {
-    if (this[INTERNAL].internalState.current !== "ACTIVE") {
+    if (
+      this[INTERNAL].lazy &&
+      this[INTERNAL].internalState.current !== "ACTIVE"
+    ) {
       this[INTERNAL].internalState.blockingPromise.resolve(executeQuery(this));
     }
 
@@ -160,7 +162,10 @@ export class Query<T> {
     this.state.error = newValue;
   }
   get value() {
-    if (this[INTERNAL].internalState.current !== "ACTIVE") {
+    if (
+      this[INTERNAL].lazy &&
+      this[INTERNAL].internalState.current !== "ACTIVE"
+    ) {
       this[INTERNAL].internalState.blockingPromise.resolve(executeQuery(this));
     }
 
@@ -170,7 +175,10 @@ export class Query<T> {
     this.state.value = newValue;
   }
   get isFetching() {
-    if (this[INTERNAL].internalState.current !== "ACTIVE") {
+    if (
+      this[INTERNAL].lazy &&
+      this[INTERNAL].internalState.current !== "ACTIVE"
+    ) {
       this[INTERNAL].internalState.blockingPromise.resolve(executeQuery(this));
     }
 
@@ -180,7 +188,10 @@ export class Query<T> {
     this.state.isFetching = newValue;
   }
   get isRevalidating() {
-    if (this[INTERNAL].internalState.current !== "ACTIVE") {
+    if (
+      this[INTERNAL].lazy &&
+      this[INTERNAL].internalState.current !== "ACTIVE"
+    ) {
       this[INTERNAL].internalState.blockingPromise.resolve(executeQuery(this));
     }
 
@@ -190,7 +201,10 @@ export class Query<T> {
     this.state.isRevalidating = newValue;
   }
   get promise() {
-    if (this[INTERNAL].internalState.current !== "ACTIVE") {
+    if (
+      this[INTERNAL].lazy &&
+      this[INTERNAL].internalState.current !== "ACTIVE"
+    ) {
       this[INTERNAL].internalState.blockingPromise.resolve(executeQuery(this));
     }
 
@@ -256,8 +270,11 @@ export class Query<T> {
   }
 }
 
-export function query<T>(fetcher: () => Promise<T>): Query<T> {
-  return new Query(fetcher);
+export function query<T>(
+  fetcher: () => Promise<T>,
+  options?: { lazy?: boolean }
+) {
+  return new Query(fetcher, options?.lazy) as Query<T> & QueryState<T>;
 }
 
 type PendingPromise<T> = Promise<T> & {
