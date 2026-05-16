@@ -1,19 +1,24 @@
+const classInstanceCache = new WeakMap<Function, boolean>();
+
 export function isCustomClassInstance(obj: unknown) {
   if (obj === null || typeof obj !== "object") return false;
 
-  const ctor = obj.constructor;
+  const ctor = (obj as any).constructor;
   // no constructor → probably Object.create(null)
   if (typeof ctor !== "function") return false;
+
+  if (classInstanceCache.has(ctor)) {
+    return classInstanceCache.get(ctor)!;
+  }
 
   const src = Function.prototype.toString.call(ctor);
 
   // 1) Exclude plain Object/Array/etc by native-code check
-  if (src.includes("[native code]")) return false;
-
   // 2) Also ignore plain Object if someone subclassed Object without new syntax
-  if (ctor === Object) return false;
+  const result = !src.includes("[native code]") && ctor !== Object;
 
-  return true;
+  classInstanceCache.set(ctor, result);
+  return result;
 }
 
 /**

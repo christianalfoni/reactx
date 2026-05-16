@@ -2,9 +2,6 @@
   "name": "reactx",
   "version": "1.0.0-alpha.4",
   "description": "Transparent reactive state management",
-  "bin": {
-    "reactx": "./bin.js"
-  },
   "keywords": [
     "state",
     "management",
@@ -16,8 +13,7 @@
     "doc": "docs"
   },
   "files": [
-    "dist",
-    "bin.js"
+    "dist"
   ],
   "module": "./dist/esm/index.js",
   "main": "./dist/esm/index.js",
@@ -29,19 +25,13 @@
       "require": "./dist/cjs/index.cjs"
     },
     "./devtools": {
-      "import": "./dist/esm/devtools.js",
-      "types": "./dist/esm/devtools.d.ts",
-      "require": "./dist/cjs/devtools.cjs"
+      "import": "./dist/esm/devtools/index.js",
+      "types": "./dist/esm/devtools/index.d.ts"
     },
-    "./babel-plugin": {
-      "import": "./dist/esm/babel-plugin.js",
-      "types": "./dist/esm/babel-plugin.d.ts",
-      "require": "./dist/cjs/babel-plugin.cjs"
-    },
-    "./swc-plugin": {
-      "import": "./dist/esm/swc-plugin.js",
-      "types": "./dist/esm/swc-plugin.d.ts",
-      "require": "./dist/cjs/swc-plugin.cjs"
+    "./vite-plugin": {
+      "import": "./dist/esm/vite-plugin.js",
+      "types": "./dist/esm/vite-plugin.d.ts",
+      "require": "./dist/cjs/vite-plugin.cjs"
     }
   },
   "types": "./dist/esm/index.d.ts",
@@ -49,7 +39,7 @@
     "build": "yarn clean && yarn build:cjs && yarn build:esm",
     "build:cjs": "tsc -p ./tsconfig.build-cjs.json && node renameToCjs.js",
     "build:esm": "tsc -p ./tsconfig.build-esm.json",
-    "clean": "rimraf ./dist ./dist-babel-plugin ./dist-swc-plugin",
+    "clean": "rimraf ./dist",
     "test": "vitest",
     "prepare": "yarn build",
     "docs:dev": "vitepress dev docs",
@@ -57,9 +47,8 @@
     "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {
-    "@types/babel__core": "^7.20.5",
-    "@types/babel__traverse": "^7.20.6",
     "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.2.3",
     "rimraf": "^6.0.1",
     "typescript": "^5.7.3",
     "vite": "^6.1.0",
@@ -67,15 +56,18 @@
     "vitest": "^3.0.5"
   },
   "dependencies": {
-    "@babel/core": "^7.26.7",
-    "@babel/traverse": "^7.26.7",
-    "@babel/types": "^7.26.7",
-    "babel-plugin-observing-components": "^0.2.0",
     "mobx": "^6.13.7",
     "mobx-react-lite": "^4.1.0",
-    "overmind-devtools": "^29.2.0-1749482703647",
     "react": "^19.0.0",
-    "swc-plugin-observing-components": "^0.2.0"
+    "react-dom": "^19.0.0"
+  },
+  "peerDependencies": {
+    "vite": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
   },
   "license": "ISC"
 }

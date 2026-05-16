@@ -1,21 +1,5 @@
 import { createRoot } from "react-dom/client";
 import "./index.css";
-import { App } from "./ui";
+import { App } from "./ui/App";
 
-import { reactive, ConsoleObserver } from "reactx";
-import { TodoState } from "./state";
-
-// Create a ConsoleObserver for debugging
-const consoleObserver = new ConsoleObserver({
-  colors: true,
-  verbose: false, // Set to true to see full event data
-});
-
-// Create and initialize the todo state
-const todoState = new TodoState();
-todoState.loadFromStorage();
-
-// Make it reactive and export
-export const state = reactive(todoState, { observer: consoleObserver });
-
-createRoot(document.getElementById("root")!).render(<App state={todoState} />);
+createRoot(document.getElementById("root")!).render(<App />);

@@ -1,44 +1,111 @@
 # Creating state
 
-```tsx
-class CounterState {
-  count = 0;
-  increase() {
-    this.count++;
-  }
-}
-```
+Define state as a plain class and expose it as a module-level singleton:
 
-With **ReactX** you do not need to define your state as reactive. This is also true for nested classes. Just create classes as you normally do. Only when you expose the root state to React you need to make it reactive.
-
-```tsx
+```ts
 import { reactive } from "reactx";
 
-const reactiveCounter = reactive(new CounterState());
+class App {
+  count = 0;
 
-render(<Counter counter={reactiveCounter} />);
+  increment() {
+    this.count++;
+  }
+
+  get doubled() {
+    return this.count * 2;
+  }
+}
+
+export const app = reactive(new App());
 ```
 
-This is what `reactive` does:
-
-- Lazily makes properties reactive when accessed by React
-- Prevents any direct mutations happening from React
-- All class methods called from React are bound to the class instance
-- Sends information to the devtools
+Components import and use it directly — no providers or hooks needed:
 
 ```tsx
-function Counter({ counter }) {
+function Counter() {
   return (
-    <div>
-      <span>{counter.count}</span>
-      <button onClick={counter.increase}>Increase</button>
-    </div>
+    <button onClick={app.increment}>
+      {app.count} (doubled: {app.doubled})
+    </button>
   );
 }
 ```
 
-::: info
+Components only re-render when the specific properties they read change.
 
-Since React can only "reactify" properties that is publicly available you can use `private` keyword in your classes to hide properties from React and prevent them from becoming reactive.
+## Nested state
 
-:::
+Break large state into composed classes. Passing sub-state as props naturally scopes re-renders to the component that cares about it:
+
+```ts
+class UserState {
+  name = "Alice";
+
+  rename(name: string) {
+    this.name = name;
+  }
+}
+
+class App {
+  user = new UserState();
+}
+
+export const app = reactive(new App());
+```
+
+```tsx
+// UserCard only re-renders when user state changes
+function UserCard({ user }: { user: UserState }) {
+  return <input value={user.name} onChange={(e) => user.rename(e.target.value)} />;
+}
+
+function Feed() {
+  return <UserCard user={app.user} />;
+}
+```
+
+## Lazy sub-state
+
+Use a getter backed by a private field to create a sub-state instance on first access and cache it for the lifetime of the app:
+
+```ts
+class App {
+  #dashboard?: DashboardState;
+
+  get dashboard() {
+    return (this.#dashboard ??= new DashboardState());
+  }
+}
+
+export const app = reactive(new App());
+```
+
+`DashboardState` is only instantiated the first time `app.dashboard` is accessed. After that the same instance is always returned.
+
+## Per-key sub-state
+
+For one instance per entity (e.g. one state object per user ID), back a method with a private `Map`:
+
+```ts
+class App {
+  #profiles = new Map<string, ProfileState>();
+
+  profile(userId: string) {
+    if (!this.#profiles.has(userId)) {
+      this.#profiles.set(userId, new ProfileState(userId));
+    }
+    return this.#profiles.get(userId)!;
+  }
+}
+
+export const app = reactive(new App());
+```
+
+```tsx
+function ProfilePage({ userId }: { userId: string }) {
+  // Same ProfileState instance returned for the same userId
+  const profile = app.profile(userId);
+  return <div>{profile.name}</div>;
+}
+```

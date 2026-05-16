@@ -16,69 +16,56 @@ pnpm add reactx@alpha
 
 :::
 
-Configure observation plugin:
+## Setup
 
-::: code-group
+ReactX requires a compiler plugin to automatically wrap your components as reactive observers. Install the Vite plugin:
 
-```ts [vite.config.ts (babel)]
+```sh
+npm install -D vite-plugin-observing-components
+```
+
+Then add it to your Vite config **before** the React plugin:
+
+```ts [vite.config.ts]
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import reactx from "reactx/babel-plugin";
+import react from "@vitejs/plugin-react-swc"; // or @vitejs/plugin-react
+import { observingComponents } from "vite-plugin-observing-components";
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    react({
-      babel: {
-        plugins: [reactx()],
-      },
-    }),
+    observingComponents({ importPath: "reactx" }),
+    react(),
   ],
 });
 ```
 
-```ts [vite.config.ts (swc)]
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-swc";
-import reactx from "reactx/swc-plugin";
+The plugin automatically wraps every exported React component with `observer`, so components re-render whenever the reactive state they read changes. No manual wrapping needed.
 
-// https://vite.dev/config/
-export default defineConfig({
-  plugins: [
-    react({
-      plugins: [reactx()],
-    }),
-  ],
-});
-```
-
-:::
-
-::: info
-You can exclude certain paths from being transformed by the plugin using the `exclude` option:
+::: info Excluding paths
+You can exclude certain paths from transformation using the `exclude` option:
 
 ```ts
-export default defineConfig({
-  plugins: [
-    react({
-      plugins: [reactx({ exclude: ["src/ui-components"] })],
-    }),
-  ],
-});
+observingComponents({
+  importPath: "reactx",
+  exclude: ["src/ui-library/**"],
+})
 ```
-
 :::
 
 ## Devtools
 
-Run the ReactX devtools with `npx reactx`. This will start an Electron app that you can connect to.
+Run the ReactX devtools with:
 
-When you create the reactive bridge to React, you can configure development mode by:
+```sh
+npx reactx
+```
+
+This starts an Electron app you can connect to. Pass an observer when creating your reactive state:
 
 ```ts
-// This connects to the default port of the Devtools
-const state = reactive(new State(), true);
+import { reactive, ConsoleObserver } from "reactx";
 
-// Define a custom host and port for the Devtools
-const state = reactive(new State(), "localhost:4041");
+export const app = reactive(new App(), {
+  observer: new ConsoleObserver(),
+});
 ```

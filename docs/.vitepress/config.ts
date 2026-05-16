@@ -3,9 +3,8 @@ import { defineConfig } from "vitepress";
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: "ReactX",
-  description: "Mobx Reimagined",
+  description: "Transparent reactive state management for React",
   themeConfig: {
-    // https://vitepress.dev/reference/default-theme-config
     nav: [
       { text: "Home", link: "/" },
       { text: "Get Started", link: "/get-started" },
@@ -22,39 +21,19 @@ export default defineConfig({
       {
         text: "Guides",
         items: [
-          {
-            text: "Creating state",
-            link: "/creating-state",
-          },
-          { text: "Data queries", link: "/data-queries" },
-          { text: "Data mutations", link: "/data-mutations" },
+          { text: "Creating state", link: "/creating-state" },
+          { text: "Async data", link: "/async-data" },
+          { text: "Mutations", link: "/mutations" },
           { text: "Subscriptions", link: "/subscriptions" },
-          {
-            text: "Explicit states",
-            link: "/explicit-states",
-          },
+          { text: "Explicit states", link: "/explicit-states" },
           { text: "Multiple UX", link: "/multiple-ux" },
-          {
-            text: "Effects",
-            link: "/effects",
-          },
-        ],
-      },
-      {
-        text: "API",
-        items: [
-          { text: "reactive", link: "/api/reactive" },
-          { text: "query", link: "/api/query" },
-          { text: "mutation", link: "/api/mutation" },
-          { text: "async", link: "/api/async" },
-          { text: "ensure", link: "/api/ensure" },
-          { text: "assign", link: "/api/assign" },
+          { text: "Services", link: "/services" },
         ],
       },
     ],
 
     socialLinks: [
-      { icon: "github", link: "https://github.com/vuejs/vitepress" },
+      { icon: "github", link: "https://github.com/christianalfoni/reactx" },
     ],
   },
 });

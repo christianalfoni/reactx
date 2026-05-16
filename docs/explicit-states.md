@@ -1,74 +1,84 @@
 # Explicit states
 
-Explicit states, unions, algebraic data types or finite state machines, the concepts are very similar. The idea is that you define state that is in one of either explicit states.
+Some state is naturally finite — it can only ever be in one of a known set of states, and each state has its own available behaviour. Modelling this explicitly (rather than as a bag of booleans) makes invalid states unrepresentable and makes it clear what actions are valid at any point.
 
-So instead of writing:
+Instead of:
 
 ```ts
 type SessionState = {
-  user: UserDTO | null;
+  user: User | null;
   isAuthenticating: boolean;
   signin(): void;
   signout(): void;
 };
 ```
 
-You describe more correctly the specific states a session can be in and what behavior is available in each state:
+Describe the states explicitly:
 
 ```ts
-type AUTHENTICATED = {
-  current: "AUTHENTICATED";
-  user: UserDTO;
-  signout(): void;
-};
+class Unauthenticated {
+  readonly current = "UNAUTHENTICATED";
+  constructor(private session: SessionState) {}
 
-type UNAUTHENTICATED = {
-  current: "UNAUTHENTICATED";
-  signin(): void;
-};
+  signin(credentials: Credentials) {
+    this.session.state = new Authenticating(this.session, credentials);
+  }
+}
 
-type AUTHENTICATING = {
-  current: "AUTHENTICATING";
-};
+class Authenticating {
+  readonly current = "AUTHENTICATING";
+  constructor(
+    private session: SessionState,
+    credentials: Credentials
+  ) {
+    authenticate(credentials).then(
+      (user) => { this.session.state = new Authenticated(this.session, user); },
+      ()     => { this.session.state = new Unauthenticated(this.session); }
+    );
+  }
+}
 
-type SessionState = AUTHENTICATED | UNAUTHENTICATED | AUTHENTICATING;
+class Authenticated {
+  readonly current = "AUTHENTICATED";
+  constructor(
+    private session: SessionState,
+    public user: User
+  ) {}
+
+  signout() {
+    this.session.state = new Unauthenticated(this.session);
+  }
+}
+
+class SessionState {
+  state: Unauthenticated | Authenticating | Authenticated =
+    new Unauthenticated(this);
+}
+
+export const app = reactive(new App());
 ```
 
-This has several benefits:
+In components, narrow the type by checking `current`:
 
-- The explicit states is a string that describes the actual state
-- With TypeScript you can narrow down what values are available in each state and you can exhaust what states are available
-- You can guarantee that certain behaviors is only run in certain states
+```tsx
+function Header() {
+  const { state } = app.session;
 
-Normally a finite state machine is implemented with a dispatcher type of concept. That means you can ask it to do anything at any point in time, but its internal implementation guards the execution by checking the current state. The bad side to this is that you will never know from a consumption perspective what functionality belongs to what state.
-
-By simply using a pattern we can resolve this:
-
-```ts
-class IDLE {
-  readonly current = "IDLE";
-  constructor(private counter: CounterState) {}
-  start() {
-    this.counter.state = new COUNTING(this.counter);
+  if (state.current === "AUTHENTICATED") {
+    return (
+      <div>
+        Welcome {state.user.name}
+        <button onClick={state.signout}>Sign out</button>
+      </div>
+    );
   }
-}
 
-class COUNTING {
-  readonly current = "COUNTING";
-  private interval: number;
-  constructor(private counter: CounterState) {
-    this.interval = setInterval(() => {
-      this.counter.count++;
-    }, 1000);
+  if (state.current === "AUTHENTICATING") {
+    return <Spinner />;
   }
-  stop() {
-    clearInterval(this.interval);
-    this.counter.state = new IDLE(this.counter);
-  }
-}
 
-class CounterState {
-  state: IDLE | COUNTING = new IDLE(this);
-  count = 0;
+  return <button onClick={() => state.signin(credentials)}>Sign in</button>;
 }
 ```
+
+Each class only exposes the methods that are valid in that state. TypeScript narrows the type as you check `current`, so calling `state.signout()` when the session is unauthenticated is a compile-time error.

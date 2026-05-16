@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { reactive } from "./proxy";
+import { reactive } from "./reactive";
 import { autorun } from "mobx";
-import type { ReactiveObserver, ReactiveEvent } from "./events";
 
 describe("reactive - basic functionality", () => {
   it("creates a reactive object from a plain object", () => {
@@ -350,46 +349,6 @@ describe("reactive - edge cases", () => {
 });
 
 describe("reactive - options", () => {
-  it("accepts observer option", () => {
-    const events: ReactiveEvent[] = [];
-    const observer: ReactiveObserver = {
-      onEvent: (event) => events.push(event),
-    };
-
-    const data = reactive({ count: 0 }, { observer });
-    expect(data.count).toBe(0);
-  });
-
-  it("calls observer when actions are executed", () => {
-    const events: ReactiveEvent[] = [];
-    const observer: ReactiveObserver = {
-      onEvent: (event) => events.push(event),
-    };
-
-    class Counter {
-      count = 0;
-
-      increment() {
-        this.count++;
-      }
-    }
-
-    const counter = reactive(new Counter(), { observer });
-    counter.increment();
-
-    // Should have received action events
-    const actionEvents = events.filter(
-      (e) => e.type === "action:start" || e.type === "action:end"
-    );
-    expect(actionEvents.length).toBeGreaterThan(0);
-
-    // Should have received execution events (renamed from operator events)
-    const executionEvents = events.filter(
-      (e) => e.type === "execution:start" || e.type === "execution:end"
-    );
-    expect(executionEvents.length).toBeGreaterThan(0);
-  });
-
   it("works without options", () => {
     const data = reactive({ count: 0 });
     expect(data.count).toBe(0);

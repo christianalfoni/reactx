@@ -1,39 +1,69 @@
 # Subscriptions
 
-When you have state that components dynamically access by reading it, you can use a subscription to control any side effects. An example of this could be the current page.
+Some state depends on a live data source — a WebSocket, a Firestore listener, a polling interval. A subscription sets up the source when a component mounts and tears it down on unmount.
+
+Define a `subscribe` method on the relevant state class that returns a cleanup function:
 
 ```ts
-class Dashboard {
-  statistics: DashboardStatistics[] = [];
-  constructor(private env: Environment) {}
-  subscribe() {
-    const disposeDashboardStatistics =
-      this.env.persistence.subscribeDashboardStatistics((stats) => {
-        this.statistics = stats;
-      });
+class DashboardState {
+  statistics: Statistic[] = [];
 
-    return () => {
-      disposeDashboardStatistics();
-    };
+  constructor(private services: Services) {}
+
+  subscribe() {
+    const unsubscribe = this.services.realtime.onStatistics((stats) => {
+      this.statistics = stats;
+    });
+
+    return unsubscribe;
   }
 }
 
-class State {
-  dashboard: Dashboard;
-  settings: Settings;
-  constructor(env: Environment) {
-    this.dashboard = new Dashboard(env);
-    this.settings = new Settings(env);
+class App {
+  #dashboard?: DashboardState;
+
+  get dashboard() {
+    return (this.#dashboard ??= new DashboardState(services));
   }
+}
+
+export const app = reactive(new App());
+```
+
+Use `useEffect` to wire the lifecycle to the component:
+
+```tsx
+function Dashboard() {
+  useEffect(() => app.dashboard.subscribe(), []);
+
+  return <div>Statistics: {app.dashboard.statistics.length}</div>;
 }
 ```
 
-And in your dashboard component:
+`useEffect` returns the cleanup function directly — no wrapper needed because `subscribe` already returns one.
 
-```tsx
-function Dashboard({ state }) {
-  useEffect(state.dashboard.subscribe, []);
+## Shared subscriptions
 
-  return <div>Dashboard {state.dashboard.statistics.length}</div>;
+If multiple components consume the same live state, you may want the subscription to stay active as long as at least one component is mounted and tear down only when the last one unmounts. A simple ref-count handles this:
+
+```ts
+class DashboardState {
+  statistics: Statistic[] = [];
+  #subscribers = 0;
+  #unsubscribe?: () => void;
+
+  subscribe() {
+    if (++this.#subscribers === 1) {
+      this.#unsubscribe = this.services.realtime.onStatistics((stats) => {
+        this.statistics = stats;
+      });
+    }
+
+    return () => {
+      if (--this.#subscribers === 0) {
+        this.#unsubscribe?.();
+      }
+    };
+  }
 }
 ```

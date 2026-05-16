@@ -1,22 +1,32 @@
 # Mental Model
 
-Components have become the fundamental building blocks for modern application development. These components are organized into a tree structure that represents your application's UI.
+Components are the fundamental building blocks of a React application. They form a tree that represents your UI.
 
 ![UI Tree Structure](./ui.png){width=250px .light-only}
 ![UI Tree Structure Dark Mode](./ui-dark.png){width=250px .dark-only}
 
-Each component can define UI elements, their associated styles, and manage state to handle dynamic interactions.
+Each component renders elements, applies styles, and can hold local state for interactive behaviour.
 
 ![Components with State and Styling](./ui-2.png){width=250px .light-only}
 ![Components with State and Styling Dark Mode](./ui-2-dark.png){width=250px .dark-only}
 
-However, not all components handle elements and state equally—some components are purely presentational (elements only), some are stateful (state only), and others combine both. As your application grows more complex and requires greater sharing of state across components, managing state within components can quickly become cumbersome. The UI tree and individual components expand significantly, making it increasingly difficult to differentiate clearly between state management and UI elements.
+As applications grow, state needs to be shared across many components. Keeping that state inside components means passing it down through props, lifting it to a common ancestor, or using Context — all of which add indirection and boilerplate.
 
-At a point it is better to separate state management from your UI components:
+The better approach is to move application state outside the component tree entirely:
 
 ![Separate State Management](./ui-3.png){width=250px .light-only}
 ![Separate State Management Dark Mode](./ui-3-dark.png){width=250px .dark-only}
 
-This separation results in a clearer, simpler UI component tree and a more manageable and organized state. Context is the "React way" of achieving this separation, where **ReactX** gives you an object oriented "just code" way of achieving this separation.
+ReactX is how you do that with plain classes. Your state lives in a module-level singleton, components import it directly, and React re-renders only the components that actually read the values that changed.
 
-By leveraging **ReactX** for external state management and **React** for your UI, you ensure that each tool focuses on its strength—ReactX effectively manages state and data complexity, while React excels in crafting intuitive, responsive user interfaces.
+```
+State class  →  reactive()  →  export const app
+                                      ↓
+                              components import app
+                              and read what they need
+                                      ↓
+                              React re-renders only
+                              the affected components
+```
+
+Each tool does what it is best at: ReactX manages state and data complexity, React renders the UI.

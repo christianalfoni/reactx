@@ -3,29 +3,28 @@
 ```tsx
 import { reactive } from "reactx";
 
-class CounterState {
+class Counter {
   count = 0;
-  increase() {
+
+  increment() {
     this.count++;
   }
 }
 
-// Expose state to React with `reactive`
-const counter = reactive(new CounterState());
+export const counter = reactive(new Counter());
 
 function Counter() {
   return (
     <div>
       <span>{counter.count}</span>
-      <button onClick={counter.increase}>Increase</button>
+      <button onClick={counter.increment}>Increment</button>
     </div>
   );
 }
 ```
 
-`reactive` is only called once, where you provide your root state to React, however you choose to expose it. It will:
+`reactive()` is called once at module level. It:
 
-- Lazily enhance your state management to be reactive, where needed
-- Prevent direct state mutation from React
-- Bind methods accessed to the class instance
-- Enable the visualization of your app and interactions in the devtools
+- Makes properties reactive when they are first accessed by a component
+- Binds all methods to the class instance
+- Enables devtools observation when an observer is provided

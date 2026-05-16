@@ -5,68 +5,70 @@ layout: home
 hero:
   name: "ReactX"
   text: "Transparent reactivity"
-  tagline: Managing state and data in rich client applications
+  tagline: Plain classes for state, pure functions for UI — React does the rest
   actions:
     - theme: brand
       text: Get Started
       link: /get-started
     - theme: alt
-      text: API
-      link: /api/reactive
+      text: Hello World
+      link: /hello-world
 
 features:
-  - title: Best of both worlds
-    details: Object oriented state management with functional UI components
+  - title: Just classes
+    details: Define state as a plain class. No decorators, no store primitives, no boilerplate.
   - title: Transparent reactivity
-    details: Just write state management and UI code, free from reactivity boilerplate
-  - title: Data Management
-    details: Query and mutation utilities for modern data management with React
+    details: Components re-render only when the state they actually read changes — automatically.
+  - title: React-native async
+    details: Async data is a Promise property. Consume it with use(), Suspense, and useTransition — no custom query layer needed.
 ---
 
 ```tsx
-// Do you remember these?
+/*
+  DO YOU REMEMBER THESE?
+*/
 class CounterComponent {
-  state = {
-    count: 0,
-  };
+  state = { count: 0 };
   increment = () => {
-    this.setState({
-      count: this.state.count + 1,
-    });
+    this.setState({ count: this.state.count + 1 });
   };
   render() {
     return <h1 onClick={this.increment}>Count is {this.state.count}</h1>;
   }
 }
 
-// How right it felt when this was introduced?
+/*
+  HOW RIGHT IT FELT WHEN THIS WAS INTRODUCED?
+*/
 function PureComponent(props) {
   return <h1 onClick={props.increment}>Count is {props.count}</h1>;
 }
 
-// And how wrong it felt when this was introduced?
+/*
+  AND HOW WRONG IT FELT WHEN THIS WAS INTRODUCED?
+*/
 function PureComponent() {
   const [count, setCount] = useState(0);
-  const increment = () =>
-    setCount({
-      count: count + 1,
-    });
-
+  const increment = () => setCount(count + 1);
   return <h1 onClick={increment}>Count is {count}</h1>;
 }
 
-// What if we did not put state into pure functions, but kept classes for state...
-class CounterState {
+/*
+  WHAT IF WE JUST KEPT CLASSES FOR STATE
+ */
+class Counter {
   count = 0;
   increment() {
     this.count++;
   }
 }
 
-// ...and pure components for UI?
-function App({ counter }) {
+export const counter = reactive(new Counter());
+
+/*
+  AND PURE FUNCTIONS FOR UI?
+*/
+function App() {
   return <h1 onClick={counter.increment}>Count is {counter.count}</h1>;
 }
-
-// React observing state and reconciling UI
 ```
