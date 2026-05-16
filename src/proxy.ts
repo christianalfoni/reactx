@@ -1,5 +1,6 @@
 import {
   _getAdministration,
+  autorun,
   computed,
   isObservable,
   isObservableArray,
@@ -10,35 +11,24 @@ import {
   isCustomClassInstance,
   PROXY_TARGET,
 } from "./common";
+import {
+  ActionContext,
+  ComputedParams,
+  ServiceCallParams,
+  MutationParams,
+  StateChangeParams,
+  ActionStartParams,
+  ActionEndParams,
+  DevContext,
+} from "./devtools/types";
+
+export const _devHooks = {};
+
+const proxyCache = new WeakMap<any, any>();
 
 /**
- * Shared proxy cache — maps raw target objects to their reactive proxy wrapper.
+ * List of array methods that mutate the array
  */
-export const proxyCache = new WeakMap<any, any>();
-
-// ---------------------------------------------------------------------------
-// Dev-mode method hook
-// ---------------------------------------------------------------------------
-
-/**
- * Optional interceptor for bound method calls on custom class instances.
- *
- * Set by `reactx/devtools` at startup; remains null in production so the
- * hot path is a single cheap property read with no extra allocations.
- *
- * Must be an object (not a plain exported `let`) so devtools can mutate it
- * — ES module live-binding exports are read-only from the consumer side.
- */
-export type MethodInterceptor = (
-  instanceName: string,
-  methodName: string,
-  invoke: (...args: unknown[]) => unknown
-) => unknown;
-
-export const _devHooks: { onMethod: MethodInterceptor | null } = {
-  onMethod: null,
-};
-
 const mutatingArrayMethods = [
   "push",
   "pop",
@@ -50,47 +40,134 @@ const mutatingArrayMethods = [
 ];
 
 /**
- * Disposes all autoruns registered against a target when it is GC'd.
+ * Creates a proxy for an array with reactive behavior
  */
-const autorunRegistry = new FinalizationRegistry(
-  (disposers: Array<() => void>) => {
-    for (const dispose of disposers) dispose();
-  }
-);
-
-// ---------------------------------------------------------------------------
-// Proxy builders
-// ---------------------------------------------------------------------------
-
-function createArrayProxy(target: any[], path: string[]) {
+function createArrayProxy(target: any[], devContext?: DevContext) {
   const baseHandler = createBaseProxyHandler(target);
 
   return new Proxy(
     isObservableArray(target) ? _getAdministration(target).values_ : target,
     {
       ...baseHandler,
+
+      // Enhanced get trap for arrays to handle special array methods
       get(_, key: string | symbol) {
         const result = Reflect.get(target, key);
 
         if (key === PROXY_TARGET) {
-          return { target, path };
+          return { target, devContext };
         }
+
+        // Return symbols directly
         if (typeof key === "symbol") {
           return result;
         }
+
+        // Handle mutating array methods
         if (mutatingArrayMethods.includes(key as string)) {
           return () => {
             throw new Error(`Cannot mutate a readonly array`);
           };
         }
 
-        return createProxy(result, path.concat(String(key)));
+        // Recursively create proxies for nested objects
+        return createProxy(result, devContext);
       },
-    }
+    },
   );
 }
 
-function createObjectProxy(target: object, path: string[]) {
+let pendingMutations: string[] = [];
+
+function createObjectMutationProxy(target: any, devContext?: DevContext) {
+  if (
+    target === null ||
+    typeof target !== "object" ||
+    Object.prototype.toString.call(target) !== "[object Object]"
+  ) {
+    return target;
+  }
+
+  return new Proxy(target, {
+    get(target, key) {
+      const result = Reflect.get(target, key);
+
+      if (typeof key === "symbol") {
+        return result;
+      }
+
+      if (result === "function") {
+        if (devContext) {
+          return createActionProxy(target, key as string, result, devContext);
+        }
+
+        return Reflect.get(target, key);
+      }
+
+      if (isCustomClassInstance(result) && !proxyCache.has(result)) {
+        if (devContext) {
+          return createServiceProxy(result, key, devContext);
+        }
+
+        return Reflect.get(target, key);
+      }
+
+      const descriptor = Object.getOwnPropertyDescriptor(target, key);
+
+      // Check if we are observing
+      if (!descriptor?.set) {
+        return result;
+      }
+
+      if (Array.isArray(result)) {
+        if (devContext) {
+          return createArrayDevtoolsProxy(result, key as string, devContext);
+        }
+
+        return createProxy(result);
+      }
+
+      if (typeof result === "object" && result !== null) {
+        if (devContext) {
+          return createObjectMutationProxy(result, devContext);
+        }
+
+        return createProxy(result);
+      }
+
+      return result;
+    },
+    set(target, key, value) {
+      const descriptor = Object.getOwnPropertyDescriptor(target, key);
+
+      // We do not track mutations for properties not observed
+      if (!descriptor?.set) {
+        return Reflect.set(target, key, value);
+      }
+
+      descriptor.set.call(target, value);
+
+      if (devContext) {
+        pendingMutations.push(devContext.path.concat(key as string).join("."));
+        devContext.hooks.onMutation({
+          actionId: devContext.actionId!,
+          mutation: {
+            path: devContext.path.concat(key as string).join("."),
+            operation: "set",
+            args: [value],
+          },
+        });
+      }
+
+      return Reflect.set(target, key, value);
+    },
+  });
+}
+
+/**
+ * Creates a proxy for an object with reactive behavior
+ */
+function createObjectProxy(target: object, devContext?: DevContext) {
   const baseHandler = createBaseProxyHandler(target);
   const isCustomClass = isCustomClassInstance(target);
   const baseTarget = isObservable(target)
@@ -98,94 +175,70 @@ function createObjectProxy(target: object, path: string[]) {
     : target;
 
   if (isCustomClass) {
-    // `observedKeys` — keys already seen through the proxy (used for the fast
-    //   cache-hit path in the get trap).
-    // `boxedKeys`    — keys already backed by an observable.box (used only by
-    //   ensureBoxed as a dedupe guard).
-    //
-    // They MUST be separate sets.  The get trap adds a key to `observedKeys`
-    // before calling `ensureBoxed`, so if ensureBoxed reused `observedKeys` as
-    // its guard it would always bail out and the property would never be boxed.
     const observedKeys = new Set<string>();
-    const boxedKeys = new Set<string>();
     const boundMethods: Record<string, Function> = {};
-    const autorunDisposers: Array<() => void> = [];
-
-    autorunRegistry.register(baseTarget, autorunDisposers, autorunDisposers);
-
-    // Boxes a plain own-property as an observable.box so that MobX can track
-    // reads of it from within a computed (e.g. inside a getter).  Called lazily
-    // on first proxy access AND eagerly for all own properties before a getter's
-    // computed is set up — the latter lets us call getter.call(target) without
-    // losing reactive tracking, and also avoids the TypeError that occurs when
-    // a private field is accessed through a Proxy (private-field checks use the
-    // WeakMap / [[PrivateFields]] of the real instance, not the proxy).
-    const ensureBoxed = (propKey: string) => {
-      if (boxedKeys.has(propKey)) return;
-      const ownDesc = Object.getOwnPropertyDescriptor(baseTarget, propKey);
-      // Only box plain value properties — getters/setters on the instance are
-      // handled separately (they become MobX computed values).
-      if (!ownDesc || !("value" in ownDesc)) return;
-      boxedKeys.add(propKey);
-      const instanceName = (baseTarget as any).constructor?.name ?? "Object";
-      const boxedValue = observable.box(ownDesc.value, {
-        name: `${instanceName}.${propKey}`,
-      });
-      Object.defineProperty(baseTarget, propKey, {
-        configurable: true,
-        enumerable: true,
-        get() { return boxedValue.get(); },
-        set(v) { boxedValue.set(v); },
-      });
-    };
 
     return new Proxy(baseTarget, {
       ...baseHandler,
       get(_: any, key: string | symbol) {
         if (key === PROXY_TARGET) {
-          return { target, path };
+          return { target, execution: devContext };
         }
+
         if (typeof key === "symbol") {
           return Reflect.get(target, key);
         }
+
         if (boundMethods[key]) {
           return boundMethods[key];
         }
+
         if (observedKeys.has(key)) {
           return createProxy(
             Reflect.get(target, key),
-            path.concat(key)
+            devContext
+              ? {
+                  ...devContext,
+                  path: devContext.path.concat(key),
+                }
+              : devContext,
           );
         }
 
         const descriptor = Object.getOwnPropertyDescriptor(
           Object.getPrototypeOf(target),
-          key
+          key,
         );
 
         observedKeys.add(key);
 
         if (descriptor && descriptor.get && !descriptor.set) {
-          // Eagerly box every own property so that getter.call(target) — using
-          // the real instance, not the proxy — can still have its observable
-          // reads tracked by MobX.  This also means getters that use private
-          // fields work correctly without any special-casing.
-          for (const instanceKey of Object.keys(baseTarget)) {
-            ensureBoxed(instanceKey);
-          }
-
-          const getter = descriptor.get;
-          const instanceName = (target as any).constructor?.name ?? "Object";
-
-          const computedValue = computed(
-            () => {
-              // Call on the real target, not the proxy.  All data properties are
-              // now observable.box-backed, so MobX tracks them as dependencies.
-              // Private fields work because `this` is the actual class instance.
-              return getter.call(target);
-            },
-            { name: `${instanceName}.${key}` }
+          const computedProxy = createProxy(
+            baseTarget,
+            devContext
+              ? {
+                  ...devContext,
+                  path: devContext.path.concat(key),
+                }
+              : devContext,
           );
+          const getter = descriptor.get;
+
+          let evaluationCount = 0;
+
+          const computedValue = computed(() => {
+            const val = getter.call(computedProxy);
+
+            if (devContext) {
+              devContext.hooks.onComputed({
+                path: devContext.path.concat(key),
+                value: val,
+                evaluationCount: evaluationCount++,
+              });
+            }
+
+            return val;
+          });
 
           Object.defineProperty(target, key, {
             configurable: true,
@@ -201,52 +254,114 @@ function createObjectProxy(target: object, path: string[]) {
         const result = Reflect.get(target, key);
 
         if (typeof result === "function") {
-          if (boundMethods[key]) return boundMethods[key];
+          if (devContext) {
+            return (
+              boundMethods[key] ||
+              (boundMethods[key] = createActionProxy(
+                baseTarget,
+                key,
+                result,
+                devContext,
+              ))
+            );
+          }
 
-          const instanceName =
-            (baseTarget as any).constructor?.name ?? "Object";
-          const bound = result.bind(baseTarget);
-
-          // The wrapper reads _devHooks.onMethod at *call* time, not at
-          // binding time, so devtools registered after first-access still works.
-          boundMethods[key] = (...args: unknown[]) => {
-            const hook = _devHooks.onMethod;
-            return hook
-              ? hook(instanceName, key, () => bound(...args))
-              : bound(...args);
-          };
-
-          return boundMethods[key];
+          return Reflect.get(target, key);
         }
 
-        ensureBoxed(key);
+        const boxedValue = observable.box(result);
 
-        const value = Reflect.get(baseTarget, key);
-        return createProxy(value, path.concat(key));
+        Object.defineProperty(baseTarget, key, {
+          configurable: true,
+          enumerable: true,
+          get() {
+            return boxedValue.get();
+          },
+          set(v) {
+            boxedValue.set(v);
+          },
+        });
+
+        let value = boxedValue.get();
+        const proxyValue = createProxy(
+          value,
+          devContext
+            ? { ...devContext, path: devContext.path.concat(key) }
+            : devContext,
+        );
+
+        if (devContext) {
+          let isFirstRun = true;
+          const statePath = devContext.path.concat(key);
+          autorun(() => {
+            const newValue = boxedValue.get();
+            const mutationPath = statePath.join(".");
+            const hasPendingMutation = pendingMutations.includes(mutationPath);
+
+            if (hasPendingMutation) {
+              pendingMutations.splice(
+                pendingMutations.indexOf(mutationPath),
+                1,
+              );
+
+              return;
+            }
+
+            // We do not update the actual class instance or array more than once or it will
+            // overwrite existing state in the devtools
+            if (
+              !isFirstRun &&
+              value === newValue &&
+              isCustomClassInstance(value)
+            ) {
+              return;
+            }
+
+            devContext.hooks.onStateChange!({
+              path: statePath,
+              value: newValue,
+            });
+
+            value = newValue;
+
+            isFirstRun = false;
+          });
+        }
+
+        return proxyValue;
       },
     });
   }
 
   return new Proxy(baseTarget, {
     ...baseHandler,
+
+    // Enhanced get trap for objects
     get(_: any, key: string | symbol) {
       const result = Reflect.get(target, key);
 
       if (key === PROXY_TARGET) {
-        return { target, path };
+        return { target, actionContext: devContext };
       }
+
       if (typeof key === "symbol" || typeof result === "function") {
         return result;
       }
 
-      return createProxy(result, path.concat(key));
+      // Recursively create proxies for nested objects
+      return createProxy(
+        result,
+        devContext
+          ? { ...devContext, path: devContext.path.concat(key) }
+          : devContext,
+      );
     },
   });
 }
 
 export function createProxy<T extends Record<string, any>>(
   target: T,
-  path: string[] = []
+  devContext?: DevContext,
 ): T {
   if (
     target === null ||
@@ -261,14 +376,159 @@ export function createProxy<T extends Record<string, any>>(
   const unwrappedTarget = target[PROXY_TARGET]?.target ?? target;
 
   const cachedProxy = proxyCache.get(unwrappedTarget);
+
   if (cachedProxy) {
     return cachedProxy;
   }
 
+  // Create appropriate proxy based on target type
   const proxy = Array.isArray(unwrappedTarget)
-    ? createArrayProxy(unwrappedTarget, path)
-    : createObjectProxy(unwrappedTarget, path);
+    ? createArrayProxy(unwrappedTarget, devContext)
+    : createObjectProxy(unwrappedTarget, devContext);
 
+  // Cache the proxy for future reuse
   proxyCache.set(unwrappedTarget, proxy);
+
   return proxy;
+}
+
+/**
+ * DEVTOOL PROXIES
+ */
+
+function createServiceProxy(
+  target: any,
+  parentKey: string,
+  devContext: DevContext,
+) {
+  return new Proxy(target, {
+    get(_, key) {
+      const result = Reflect.get(target, key);
+
+      if (typeof result === "function") {
+        return (...args: any[]) => {
+          let funcResult;
+          let error;
+
+          try {
+            funcResult = result.call(target, ...args);
+          } catch (e) {
+            error = e;
+            throw e;
+          } finally {
+            devContext.hooks.onServiceCall!({
+              actionId: devContext.actionId!,
+              methodName: String(key),
+              path: devContext.path,
+              args,
+              result: funcResult,
+              error,
+            });
+          }
+
+          return funcResult;
+        };
+      }
+    },
+  });
+}
+
+let currentActionId = 0;
+
+function createActionProxy(
+  target: any,
+  key: string,
+  func: Function,
+  devContext: DevContext,
+) {
+  const actionId = `action-${currentActionId++}`;
+  const actionName = devContext.path.concat(key).join(".");
+
+  return new Proxy(func, {
+    apply(_, __, args) {
+      const startTime = performance.now();
+
+      const proxy = createObjectMutationProxy(target, {
+        ...devContext,
+        actionId,
+      });
+
+      devContext.hooks.onActionStart({
+        actionId,
+        name: actionName,
+        path: devContext.path.concat(key),
+        args,
+        parentActionId: devContext.actionId,
+      });
+
+      const result = Reflect.apply(func, proxy, args);
+
+      if (result instanceof Promise) {
+        result
+          .then(() => {
+            const duration = performance.now() - startTime;
+            devContext.hooks.onActionEnd({
+              actionId,
+              duration,
+            });
+          })
+          .catch((error) => {
+            const duration = performance.now() - startTime;
+            devContext.hooks.onActionEnd({
+              actionId,
+              duration,
+              error,
+            });
+          });
+      } else {
+        const duration = performance.now() - startTime;
+        devContext.hooks.onActionEnd({
+          actionId,
+          duration,
+        });
+      }
+
+      return result;
+    },
+  });
+}
+
+function createArrayDevtoolsProxy(
+  target: any,
+  parentKey: string,
+  devContext: DevContext,
+) {
+  return new Proxy(target, {
+    // Enhanced get trap for arrays to handle special array methods
+    get(_, key: string | symbol) {
+      const result = Reflect.get(target, key);
+
+      if (typeof key === "symbol") {
+        return result;
+      }
+
+      // Handle mutating array methods
+      if (mutatingArrayMethods.includes(key as string)) {
+        return (...args: []) => {
+          const val = result.call(target, ...args);
+          devContext.hooks.onMutation({
+            actionId: devContext.actionId!,
+            mutation: {
+              path: devContext.path.concat(parentKey as string).join("."),
+              operation: key as any,
+              args,
+            },
+          });
+
+          return val;
+        };
+      }
+
+      // Recursively create proxies for nested objects
+      return createObjectMutationProxy(result, {
+        ...devContext,
+        path: devContext.path.concat(parentKey as string, key as string),
+      });
+    },
+  });
 }

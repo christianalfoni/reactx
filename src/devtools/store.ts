@@ -62,9 +62,6 @@ class DevtoolsStore {
         });
       }
     });
-
-    _devHooks.onMethod = (instanceName, methodName, invoke) =>
-      this._trackAction(`${instanceName}.${methodName}`, invoke);
   }
 
   // ── Registration ──────────────────────────────────────────────────────────
@@ -82,7 +79,7 @@ class DevtoolsStore {
 
   private _trackAction(
     label: string,
-    invoke: (...args: unknown[]) => unknown
+    invoke: (...args: unknown[]) => unknown,
   ): unknown {
     const mutations: Mutation[] = [];
     const id = this._nextId++;
@@ -129,7 +126,7 @@ class DevtoolsStore {
     id: number,
     label: string,
     mutations: Mutation[],
-    start: number
+    start: number,
   ) {
     runInAction(() => {
       this.actions.unshift({

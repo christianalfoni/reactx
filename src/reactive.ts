@@ -1,4 +1,5 @@
-import { createProxy } from "./proxy";
+import type { DevHooks } from "./devtools/types";
+import { _devHooks, createProxy } from "./proxy";
 
 /**
  * Wraps a class instance (or plain object) in a reactive proxy.
@@ -8,7 +9,22 @@ import { createProxy } from "./proxy";
  * re-render when that state changes.
  */
 export function reactive<T extends Record<string, any>>(target: T): T {
-  const proxy = createProxy(target, []);
+  const proxy = createProxy(
+    target,
+    true // Object.keys(_devHooks).length
+      ? {
+          path: [],
+          hooks: {
+            onActionEnd: console.log,
+            onActionStart: console.log,
+            onComputed: console.log,
+            onMutation: console.log,
+            onServiceCall: console.log,
+            onStateChange: console.log,
+          } satisfies DevHooks,
+        }
+      : undefined,
+  );
 
   // Dev-only: register with devtools.
   //
