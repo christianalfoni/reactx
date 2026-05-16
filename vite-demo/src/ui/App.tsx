@@ -1,15 +1,12 @@
-import { Todos } from "./Todos";
-import { Posts } from "./Posts";
-import { Settings } from "./Settings";
-import "../App.css";
+import { app } from "../app";
 
 export function App() {
   return (
-    <div className="app">
-      <h1>ReactX</h1>
-      <Todos />
-      <Posts />
-      <Settings />
+    <div>
+      <h1>Count: {app.count}</h1>
+      <button onClick={app.increment}>increment</button>
+      <button onClick={app.decrement}>decrement</button>
+      <button onClick={app.random}>random</button>
     </div>
   );
 }
