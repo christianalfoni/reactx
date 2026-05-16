@@ -11,16 +11,7 @@ import {
   isCustomClassInstance,
   PROXY_TARGET,
 } from "./common";
-import {
-  ActionContext,
-  ComputedParams,
-  ServiceCallParams,
-  MutationParams,
-  StateChangeParams,
-  ActionStartParams,
-  ActionEndParams,
-  DevContext,
-} from "./devtools/types";
+import { DevContext } from "./devtools/types";
 
 export const _devHooks = {};
 
@@ -77,8 +68,6 @@ function createArrayProxy(target: any[], devContext?: DevContext) {
   );
 }
 
-let pendingMutations: string[] = [];
-
 function createObjectMutationProxy(target: any, devContext?: DevContext) {
   if (
     target === null ||
@@ -96,7 +85,7 @@ function createObjectMutationProxy(target: any, devContext?: DevContext) {
         return result;
       }
 
-      if (result === "function") {
+      if (typeof result === "function") {
         if (devContext) {
           return createActionProxy(target, key as string, result, devContext);
         }
@@ -129,7 +118,10 @@ function createObjectMutationProxy(target: any, devContext?: DevContext) {
 
       if (typeof result === "object" && result !== null) {
         if (devContext) {
-          return createObjectMutationProxy(result, devContext);
+          return createObjectMutationProxy(result, {
+            ...devContext,
+            path: devContext.path.concat(key),
+          });
         }
 
         return createProxy(result);
@@ -148,7 +140,6 @@ function createObjectMutationProxy(target: any, devContext?: DevContext) {
       descriptor.set.call(target, value);
 
       if (devContext) {
-        pendingMutations.push(devContext.path.concat(key as string).join("."));
         devContext.hooks.onMutation({
           actionId: devContext.actionId!,
           mutation: {
@@ -182,10 +173,10 @@ function createObjectProxy(target: object, devContext?: DevContext) {
       ...baseHandler,
       get(_: any, key: string | symbol) {
         if (key === PROXY_TARGET) {
-          return { target, execution: devContext };
+          return { target, devContext };
         }
 
-        if (typeof key === "symbol") {
+        if (typeof key === "symbol" || key.startsWith("isMobX")) {
           return Reflect.get(target, key);
         }
 
@@ -295,17 +286,6 @@ function createObjectProxy(target: object, devContext?: DevContext) {
           const statePath = devContext.path.concat(key);
           autorun(() => {
             const newValue = boxedValue.get();
-            const mutationPath = statePath.join(".");
-            const hasPendingMutation = pendingMutations.includes(mutationPath);
-
-            if (hasPendingMutation) {
-              pendingMutations.splice(
-                pendingMutations.indexOf(mutationPath),
-                1,
-              );
-
-              return;
-            }
 
             // We do not update the actual class instance or array more than once or it will
             // overwrite existing state in the devtools
@@ -418,8 +398,8 @@ function createServiceProxy(
           } finally {
             devContext.hooks.onServiceCall!({
               actionId: devContext.actionId!,
-              methodName: String(key),
-              path: devContext.path,
+              name: String(key),
+              path: devContext.path.concat(parentKey),
               args,
               result: funcResult,
               error,

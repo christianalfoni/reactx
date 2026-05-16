@@ -53,7 +53,7 @@ export interface ExecutionStartData {
 
 export interface ServiceCallParams {
   actionId: string;
-  methodName: string;
+  name: string;
   path: string[];
   args: any[];
   result: any;

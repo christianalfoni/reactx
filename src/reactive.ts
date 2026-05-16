@@ -14,14 +14,7 @@ export function reactive<T extends Record<string, any>>(target: T): T {
     true // Object.keys(_devHooks).length
       ? {
           path: [],
-          hooks: {
-            onActionEnd: console.log,
-            onActionStart: console.log,
-            onComputed: console.log,
-            onMutation: console.log,
-            onServiceCall: console.log,
-            onStateChange: console.log,
-          } satisfies DevHooks,
+          hooks: _devHooks as DevHooks,
         }
       : undefined,
   );
