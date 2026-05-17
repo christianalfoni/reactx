@@ -534,12 +534,10 @@ function Tab({
   label,
   active,
   onClick,
-  badge,
 }: {
   label: string;
   active: boolean;
   onClick: () => void;
-  badge?: number;
 }) {
   return (
     <button
@@ -553,25 +551,9 @@ function Tab({
         cursor: "pointer",
         fontFamily: "inherit",
         fontSize: "11px",
-        display: "flex",
-        alignItems: "center",
-        gap: "4px",
       }}
     >
       {label}
-      {badge !== undefined && badge > 0 && (
-        <span
-          style={{
-            background: C.accentDim,
-            color: C.accent,
-            borderRadius: "9999px",
-            padding: "0 5px",
-            fontSize: "10px",
-          }}
-        >
-          {badge}
-        </span>
-      )}
     </button>
   );
 }
@@ -584,7 +566,6 @@ export const Overlay = observer(function Overlay() {
   const { width, onMouseDown } = useResizableWidth();
 
   const instanceNames = Object.keys(devtoolsStore.stateSnapshot);
-  const instanceCount = instanceNames.length;
   const actionCount = devtoolsStore.actions.length;
 
   if (!open) {
@@ -592,19 +573,6 @@ export const Overlay = observer(function Overlay() {
       <button style={s.badge} onClick={() => setOpen(true)}>
         <span style={{ color: C.accent, fontSize: "14px" }}>⬡</span>
         <span>ReactX</span>
-        {instanceCount > 0 && (
-          <span
-            style={{
-              background: C.accentDim,
-              color: C.accent,
-              borderRadius: "9999px",
-              padding: "0 5px",
-              fontSize: "10px",
-            }}
-          >
-            {instanceCount}
-          </span>
-        )}
       </button>
     );
   }
@@ -639,13 +607,11 @@ export const Overlay = observer(function Overlay() {
             label="State"
             active={tab === "state"}
             onClick={() => setTab("state")}
-            badge={instanceCount}
           />
           <Tab
             label="Actions"
             active={tab === "actions"}
             onClick={() => setTab("actions")}
-            badge={actionCount}
           />
         </div>
         <button
@@ -668,7 +634,7 @@ export const Overlay = observer(function Overlay() {
       {/* State tab */}
       {tab === "state" && (
         <div style={s.scrollArea}>
-          {instanceCount === 0 ? (
+          {instanceNames.length === 0 ? (
             <div
               style={{
                 padding: "32px 14px",

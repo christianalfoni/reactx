@@ -18,54 +18,30 @@ pnpm add reactx@alpha
 
 ## Setup
 
-ReactX requires a compiler plugin to automatically wrap your components as reactive observers. Install the Vite plugin:
-
-```sh
-npm install -D vite-plugin-observing-components
-```
-
-Then add it to your Vite config **before** the React plugin:
+ReactX includes a Vite plugin that automatically wraps your components as reactive observers and injects the DevTools overlay in development. Add it to your Vite config **before** the React plugin:
 
 ```ts [vite.config.ts]
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc"; // or @vitejs/plugin-react
-import { observingComponents } from "vite-plugin-observing-components";
+import { reactx } from "reactx/vite-plugin";
 
 export default defineConfig({
   plugins: [
-    observingComponents({ importPath: "reactx" }),
+    reactx(),
     react(),
   ],
 });
 ```
 
-The plugin automatically wraps every exported React component with `observer`, so components re-render whenever the reactive state they read changes. No manual wrapping needed.
+The plugin does two things:
+
+- **Observer transform** — every exported React component is automatically wrapped with `observer`, so components re-render whenever the reactive state they read changes. No manual wrapping needed.
+- **DevTools overlay** — in development, a panel is injected into the page showing live state, computed values, and a full action history with mutations and service calls.
 
 ::: info Excluding paths
-You can exclude certain paths from transformation using the `exclude` option:
+You can exclude certain files from the observer transform using the `exclude` option:
 
 ```ts
-observingComponents({
-  importPath: "reactx",
-  exclude: ["src/ui-library/**"],
-})
+reactx({ exclude: ["src/ui-library/**"] })
 ```
 :::
-
-## Devtools
-
-Run the ReactX devtools with:
-
-```sh
-npx reactx
-```
-
-This starts an Electron app you can connect to. Pass an observer when creating your reactive state:
-
-```ts
-import { reactive, ConsoleObserver } from "reactx";
-
-export const app = reactive(new App(), {
-  observer: new ConsoleObserver(),
-});
-```

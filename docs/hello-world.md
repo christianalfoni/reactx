@@ -5,7 +5,6 @@ import { reactive } from "reactx";
 
 class Counter {
   count = 0;
-
   increment() {
     this.count++;
   }

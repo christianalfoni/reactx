@@ -1,48 +1,61 @@
 import type { Plugin } from "vite";
+import { transformAsync } from "@babel/core";
+import createPlugin from "babel-plugin-observing-components";
 
 const VIRTUAL_ID = "virtual:reactx-devtools";
 const RESOLVED_VIRTUAL_ID = "\0" + VIRTUAL_ID;
 
-/**
- * Vite plugin that automatically injects the ReactX DevTools overlay in
- * development mode. The overlay is mounted into a Shadow DOM root so it
- * never interferes with the host application's styles.
- *
- * Add this to your `vite.config.ts` **before** the React plugin:
- *
- * ```ts
- * import { reactxDevtools } from "reactx/vite-plugin";
- *
- * export default defineConfig({
- *   plugins: [reactxDevtools(), react()],
- * });
- * ```
- */
-export function reactxDevtools(): Plugin {
-  return {
-    name: "vite-plugin-reactx-devtools",
+export interface ReactxPluginOptions {
+  /** Glob patterns to exclude from the observer transform (e.g. ["**\/stories\/**"]) */
+  exclude?: string[];
+}
 
-    // Dev server only — no-op during production builds.
-    apply: "serve",
+export function reactx(options: ReactxPluginOptions = {}): Plugin[] {
+  return [
+    // ── observer transform ────────────────────────────────────────────────
+    {
+      name: "vite-plugin-reactx-observer",
+      enforce: "pre",
+      async transform(code, id) {
+        if (!/\.[jt]sx?$/.test(id)) return null;
+        if (id.includes("node_modules")) return null;
 
-    resolveId(id) {
-      if (id === VIRTUAL_ID) return RESOLVED_VIRTUAL_ID;
+        const result = await transformAsync(code, {
+          filename: id,
+          plugins: [createPlugin({ importPath: "reactx", ...options })],
+          sourceMaps: true,
+          configFile: false,
+          babelrc: false,
+          parserOpts: { plugins: ["jsx", "typescript"] },
+        });
+
+        if (!result || result.code == null) return null;
+        return { code: result.code, map: result.map ?? null };
+      },
     },
 
-    load(id) {
-      if (id === RESOLVED_VIRTUAL_ID) {
-        return `import "reactx/devtools";`;
-      }
-    },
+    // ── devtools overlay (dev only) ───────────────────────────────────────
+    {
+      name: "vite-plugin-reactx-devtools",
+      apply: "serve",
 
-    transformIndexHtml() {
-      return [
-        {
-          tag: "script",
-          attrs: { type: "module", src: `/@id/${VIRTUAL_ID}` },
-          injectTo: "head-prepend",
-        },
-      ];
+      resolveId(id) {
+        if (id === VIRTUAL_ID) return RESOLVED_VIRTUAL_ID;
+      },
+
+      load(id) {
+        if (id === RESOLVED_VIRTUAL_ID) return `import "reactx/devtools";`;
+      },
+
+      transformIndexHtml() {
+        return [
+          {
+            tag: "script",
+            attrs: { type: "module", src: `/@id/${VIRTUAL_ID}` },
+            injectTo: "head-prepend",
+          },
+        ];
+      },
     },
-  };
+  ];
 }
