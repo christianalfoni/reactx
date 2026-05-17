@@ -42,6 +42,7 @@ export interface ActionEndParams {
   actionId: string;
   duration?: number;
   error?: any;
+  isAsync?: boolean;
 }
 
 export interface ExecutionStartData {
@@ -53,10 +54,18 @@ export interface ExecutionStartData {
 
 export interface ServiceCallParams {
   actionId: string;
+  serviceCallId: string;
   name: string;
   path: string[];
   args: any[];
   result: any;
+  error?: any;
+  isAsync?: boolean;
+}
+
+export interface ServiceCallResultParams {
+  serviceCallId: string;
+  result?: any;
   error?: any;
 }
 
@@ -65,6 +74,7 @@ export type DevHooks = {
   onComputed(data: ComputedParams): void;
   onStateChange(data: StateChangeParams): void;
   onServiceCall(data: ServiceCallParams): void;
+  onServiceCallResult(data: ServiceCallResultParams): void;
   onActionStart(data: ActionStartParams): void;
   onActionEnd(data: ActionEndParams): void;
 };

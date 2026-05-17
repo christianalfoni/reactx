@@ -40,7 +40,7 @@ export function reactxDevtools(): Plugin {
         {
           tag: "script",
           attrs: { type: "module", src: `/@id/${VIRTUAL_ID}` },
-          injectTo: "body",
+          injectTo: "head-prepend",
         },
       ];
     },

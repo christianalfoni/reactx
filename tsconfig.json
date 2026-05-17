@@ -2,6 +2,7 @@
   "compilerOptions": {
     "rootDir": "src",
     "target": "ES2020",
+    "lib": ["ES2021", "DOM"],
     "moduleResolution": "node",
     "skipLibCheck": true,
     "importHelpers": false,

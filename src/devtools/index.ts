@@ -1,27 +1,33 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
+import { _devHooks, _stateChangeQueue, _computedQueue } from "../proxy";
 import { devtoolsStore } from "./store";
 import { Overlay } from "./Overlay";
 
 // Guard against double-registration (e.g. HMR).
 if (!(globalThis as any).__REACTX_DEVTOOLS__) {
-  // Expose the registration hook so reactive() can call it without importing
-  // from this module directly (which would pull devtools into the main bundle).
-  (globalThis as any).__REACTX_DEVTOOLS__ = {
-    register(target: any, proxy: any) {
-      devtoolsStore.register(target, proxy);
-    },
-  };
+  (globalThis as any).__REACTX_DEVTOOLS__ = true;
 
-  // Drain any instances that called reactive() before this script loaded.
-  // This is the common case: app modules execute before the injected devtools
-  // script because both are <script type="module"> and run in document order.
-  const queue: Array<{ target: any; proxy: any }> =
-    (globalThis as any).__REACTX_DEVTOOLS_QUEUE__ ?? [];
-  for (const { target, proxy } of queue) {
-    devtoolsStore.register(target, proxy);
+  // Wire the proxy hooks to the devtools store.
+  // _devHooks is a shared object reference passed into every reactive() proxy,
+  // so assigning here affects all existing and future proxies.
+  Object.assign(_devHooks, {
+    onStateChange: (d: any) => devtoolsStore.handleStateChange(d),
+    onComputed: (d: any) => devtoolsStore.handleComputed(d),
+    onActionStart: (d: any) => devtoolsStore.handleActionStart(d),
+    onActionEnd: (d: any) => devtoolsStore.handleActionEnd(d),
+    onMutation: (d: any) => devtoolsStore.handleMutation(d),
+    onServiceCall: (d: any) => devtoolsStore.handleServiceCall(d),
+    onServiceCallResult: (d: any) => devtoolsStore.handleServiceCallResult(d),
+  });
+
+  // Replay any state/computed changes that fired before devtools loaded.
+  for (const d of _stateChangeQueue.splice(0)) {
+    devtoolsStore.handleStateChange(d);
   }
-  delete (globalThis as any).__REACTX_DEVTOOLS_QUEUE__;
+  for (const d of _computedQueue.splice(0)) {
+    devtoolsStore.handleComputed(d);
+  }
 
   // Mount the overlay into a Shadow DOM root so our styles never bleed into
   // (or get overridden by) the host application's CSS.
@@ -31,8 +37,6 @@ if (!(globalThis as any).__REACTX_DEVTOOLS__) {
 
   const shadow = host.attachShadow({ mode: "open" });
 
-  // Shadow DOM doesn't inherit document styles, but box-sizing and resets
-  // still matter for our own elements.
   const style = document.createElement("style");
   style.textContent = `
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }

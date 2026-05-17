@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { observer } from "mobx-react-lite";
+import { CLASS_NAME_KEY } from "./store";
 
 // ─── Tokens (must stay in sync with Overlay.tsx) ─────────────────────────────
 const C = {
@@ -15,7 +16,6 @@ const C = {
   yellow: "#fbbf24",
   blue: "#60a5fa",
   purple: "#a78bfa",
-  arrow: "#4b5563",
 };
 
 // ─── Primitive renderer ───────────────────────────────────────────────────────
@@ -31,6 +31,8 @@ export function Primitive({ value }: { value: unknown }) {
     const display = value.length > 60 ? value.slice(0, 60) + "…" : value;
     return <span style={{ color: C.yellow }}>"{display}"</span>;
   }
+  if (typeof value === "function")
+    return <span style={{ color: C.purple }}>Function</span>;
   return <span style={{ color: C.text }}>{String(value)}</span>;
 }
 
@@ -45,16 +47,18 @@ function CollapsedSummary({ value }: { value: object }) {
       </span>
     );
   }
-  const keys = Object.keys(value).filter(
+  const className = (value as any)[CLASS_NAME_KEY] as string | undefined;
+  const count = Object.keys(value).filter(
     (k) => typeof (value as any)[k] !== "function"
-  );
-  const preview = keys.slice(0, 3).join(", ");
+  ).length;
   return (
     <span style={{ color: C.muted }}>
-      {"{ "}
-      {preview}
-      {keys.length > 3 ? ", …" : ""}
-      {" }"}
+      {className && (
+        <span style={{ color: C.accent, fontStyle: "italic", marginRight: "4px" }}>{className}</span>
+      )}
+      {"{"}
+      {count}
+      {"}"}
     </span>
   );
 }
@@ -68,6 +72,12 @@ export interface JsonNodeProps {
   depth?: number;
   /** Auto-expand this node on first render */
   defaultOpen?: boolean;
+  /** Skip the root toggle header and always render children directly */
+  hideRoot?: boolean;
+  /** Set of dot-joined paths (relative to this node's root) that are computed */
+  computedPaths?: Set<string>;
+  /** Dot-joined path from the root to this node, used to match computedPaths */
+  pathPrefix?: string;
 }
 
 /**
@@ -80,8 +90,17 @@ export const JsonNode = observer(function JsonNode({
   label,
   depth = 0,
   defaultOpen = false,
+  hideRoot = false,
+  computedPaths,
+  pathPrefix = "",
 }: JsonNodeProps) {
   const [open, setOpen] = useState(defaultOpen);
+
+  const isComputed =
+    computedPaths !== undefined &&
+    pathPrefix !== undefined &&
+    pathPrefix !== "" &&
+    computedPaths.has(pathPrefix);
 
   const isArray = Array.isArray(value);
   const isObject =
@@ -104,12 +123,14 @@ export const JsonNode = observer(function JsonNode({
   const labelNode = label !== undefined && (
     <span
       style={{
-        color: typeof label === "number" ? C.purple : C.muted,
+        color: isComputed ? C.accent : typeof label === "number" ? C.purple : C.muted,
         flexShrink: 0,
         minWidth: typeof label === "number" ? "24px" : "0",
+        fontStyle: isComputed ? "italic" : undefined,
       }}
     >
       {label}
+      {isComputed && <span style={{ fontSize: "9px", marginLeft: "3px", opacity: 0.7 }}>⊙</span>}
     </span>
   );
 
@@ -123,14 +144,43 @@ export const JsonNode = observer(function JsonNode({
     );
   }
 
+  // ── hideRoot: skip the toggle header, render children directly ───────────
+  if (hideRoot) {
+    const keys = isArray
+      ? Array.from({ length: (value as unknown[]).length }, (_, i) => i)
+      : (Object.keys(value as object) as Array<string | number>).filter(
+          (k) => typeof (value as any)[k] !== "function",
+        ).sort();
+    return (
+      <>
+        {keys.map((k) => {
+          const childPath = pathPrefix ? `${pathPrefix}.${String(k)}` : String(k);
+          return (
+            <JsonNode
+              key={String(k)}
+              value={(value as any)[k]}
+              label={k}
+              depth={depth}
+              computedPaths={computedPaths}
+              pathPrefix={childPath}
+            />
+          );
+        })}
+      </>
+    );
+  }
+
   // ── Object / Array ────────────────────────────────────────────────────────
   const keys = isArray
     ? Array.from({ length: (value as unknown[]).length }, (_, i) => i)
     : (Object.keys(value as object) as Array<string | number>).filter(
         (k) => typeof (value as any)[k] !== "function"
-      );
+      ).sort();
 
   const [openBracket, closeBracket] = isArray ? ["[", "]"] : ["{", "}"];
+  const className = !isArray
+    ? ((value as any)[CLASS_NAME_KEY] as string | undefined)
+    : undefined;
 
   return (
     <>
@@ -138,7 +188,7 @@ export const JsonNode = observer(function JsonNode({
       <div
         role="button"
         tabIndex={0}
-        onClick={() => setOpen((o) => !o)}
+        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
         onKeyDown={(e) => e.key === "Enter" && setOpen((o) => !o)}
         style={{
           ...rowStyle,
@@ -153,24 +203,15 @@ export const JsonNode = observer(function JsonNode({
           ((e.currentTarget as HTMLElement).style.background = "transparent")
         }
       >
-        {/* Expand/collapse chevron */}
-        <span
-          style={{
-            color: C.arrow,
-            fontSize: "9px",
-            flexShrink: 0,
-            width: "10px",
-            marginLeft: -14,
-            paddingLeft: depth === 0 ? 0 : undefined,
-          }}
-        >
-          {open ? "▼" : "▶"}
-        </span>
-
         {labelNode}
 
         {open ? (
-          <span style={{ color: C.mutedDim }}>{openBracket}</span>
+          <>
+            {className && (
+              <span style={{ color: C.accent, fontStyle: "italic" }}>{className}</span>
+            )}
+            <span style={{ color: C.mutedDim }}>{openBracket}</span>
+          </>
         ) : (
           <CollapsedSummary value={value as object} />
         )}
@@ -178,14 +219,21 @@ export const JsonNode = observer(function JsonNode({
 
       {/* Children */}
       {open &&
-        keys.map((k) => (
-          <JsonNode
-            key={String(k)}
-            value={(value as any)[k]}
-            label={k}
-            depth={depth + 1}
-          />
-        ))}
+        keys.map((k) => {
+          const childPath = pathPrefix
+            ? `${pathPrefix}.${String(k)}`
+            : String(k);
+          return (
+            <JsonNode
+              key={String(k)}
+              value={(value as any)[k]}
+              label={k}
+              depth={depth + 1}
+              computedPaths={computedPaths}
+              pathPrefix={childPath}
+            />
+          );
+        })}
 
       {/* Closing bracket */}
       {open && (

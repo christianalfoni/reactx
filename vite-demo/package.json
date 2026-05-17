@@ -12,7 +12,10 @@
   "dependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "reactx": "file:.."
+    "reactx": "file:..",
+    "reflect-metadata": "^0.2.2",
+    "tsyringe": "^4.10.0",
+    "uuid": "^14.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",

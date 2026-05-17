@@ -63,10 +63,10 @@ class Counter {
   }
 }
 
-export const counter = reactive(new Counter());
+const counter = reactive(new Counter());
 
 /*
-  AND PURE FUNCTIONS FOR UI?
+  AND JUST DERIVE UI?
 */
 function App() {
   return <h1 onClick={counter.increment}>Count is {counter.count}</h1>;

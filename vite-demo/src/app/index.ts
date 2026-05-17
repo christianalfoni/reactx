@@ -1,31 +1,48 @@
 import { reactive } from "reactx";
+import * as uuid from "uuid";
 
-class RandomService {
-  getNumber() {
-    return Math.round(Math.random() * 100);
+class JSONStorageService {
+  get<T>(key: string) {
+    const value = localStorage.getItem(key);
+
+    return value ? (JSON.parse(value) as T) : null;
+  }
+  set<T>(key: string, value: T) {
+    localStorage.setItem(key, JSON.stringify(value));
   }
 }
 
-class NestedState {
-  count = 0;
-  increment() {
-    this.count++;
-  }
-}
+type TodoDTO = {
+  id: string;
+  title: string;
+  completed: boolean;
+};
 
 class AppState {
-  private randomService = new RandomService();
-  nested = new NestedState();
-  count = 0;
-  increment() {
-    this.count++;
-    this.nested.increment();
+  private _jsonStorageService = new JSONStorageService();
+  private _todos: Record<string, TodoDTO> =
+    this._jsonStorageService.get("todos") || {};
+  get todos() {
+    return Object.values(this._todos);
   }
-  decrement() {
-    this.count--;
+  private withStorage(cb: () => void) {
+    cb();
+    this._jsonStorageService.set("todos", this._todos);
   }
-  random() {
-    this.count = this.randomService.getNumber();
+  addTodo(title: string) {
+    this.withStorage(() => {
+      const id = uuid.v4();
+      this._todos[id] = {
+        id,
+        title,
+        completed: false,
+      };
+    });
+  }
+  toggleTodo(id: string) {
+    this.withStorage(() => {
+      this._todos[id].completed = !this._todos[id].completed;
+    });
   }
 }
 

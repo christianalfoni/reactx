@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [
     observingComponents({ importPath: "reactx" }),
     reactxDevtools(),
-    react(),
+    react({ tsDecorators: true }),
   ],
   resolve: {
     // Ensure react/react-dom resolve from this package, not from the

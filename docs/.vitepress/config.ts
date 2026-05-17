@@ -21,13 +21,9 @@ export default defineConfig({
       {
         text: "Guides",
         items: [
-          { text: "Creating state", link: "/creating-state" },
-          { text: "Async data", link: "/async-data" },
-          { text: "Mutations", link: "/mutations" },
-          { text: "Subscriptions", link: "/subscriptions" },
-          { text: "Explicit states", link: "/explicit-states" },
-          { text: "Multiple UX", link: "/multiple-ux" },
+          { text: "State", link: "/state" },
           { text: "Services", link: "/services" },
+          { text: "Components", link: "/components" },
         ],
       },
     ],

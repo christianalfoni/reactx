@@ -13,9 +13,15 @@ import {
 } from "./common";
 import { DevContext } from "./devtools/types";
 
-export const _devHooks = {};
+export const _devHooks: Record<string, Function> = {};
+export const _stateChangeQueue: Array<{ path: string[]; value: any }> = [];
+export const _computedQueue: Array<{ path: string[]; value: any; evaluationCount: number }> = [];
 
 const proxyCache = new WeakMap<any, any>();
+
+const autorunRegistry = new FinalizationRegistry<() => void>((dispose) => {
+  dispose();
+});
 
 /**
  * List of array methods that mutate the array
@@ -132,15 +138,17 @@ function createObjectMutationProxy(target: any, devContext?: DevContext) {
     set(target, key, value) {
       const descriptor = Object.getOwnPropertyDescriptor(target, key);
 
-      // We do not track mutations for properties not observed
-      if (!descriptor?.set) {
+      // Property exists but has no setter — not observable, skip tracking
+      if (descriptor && !descriptor.set) {
         return Reflect.set(target, key, value);
       }
 
-      descriptor.set.call(target, value);
+      if (descriptor?.set) {
+        descriptor.set.call(target, value);
+      }
 
       if (devContext) {
-        devContext.hooks.onMutation({
+        devContext.hooks.onMutation?.({
           actionId: devContext.actionId!,
           mutation: {
             path: devContext.path.concat(key as string).join("."),
@@ -221,11 +229,16 @@ function createObjectProxy(target: object, devContext?: DevContext) {
             const val = getter.call(computedProxy);
 
             if (devContext) {
-              devContext.hooks.onComputed({
+              const payload = {
                 path: devContext.path.concat(key),
                 value: val,
                 evaluationCount: evaluationCount++,
-              });
+              };
+              if (devContext.hooks.onComputed) {
+                devContext.hooks.onComputed(payload);
+              } else {
+                _computedQueue.push(payload);
+              }
             }
 
             return val;
@@ -284,7 +297,7 @@ function createObjectProxy(target: object, devContext?: DevContext) {
         if (devContext) {
           let isFirstRun = true;
           const statePath = devContext.path.concat(key);
-          autorun(() => {
+          const dispose = autorun(() => {
             const newValue = boxedValue.get();
 
             // We do not update the actual class instance or array more than once or it will
@@ -297,15 +310,17 @@ function createObjectProxy(target: object, devContext?: DevContext) {
               return;
             }
 
-            devContext.hooks.onStateChange!({
-              path: statePath,
-              value: newValue,
-            });
+            if (devContext.hooks.onStateChange) {
+              devContext.hooks.onStateChange({ path: statePath, value: newValue });
+            } else {
+              _stateChangeQueue.push({ path: statePath, value: newValue });
+            }
 
             value = newValue;
 
             isFirstRun = false;
           });
+          autorunRegistry.register(target, dispose);
         }
 
         return proxyValue;
@@ -387,23 +402,54 @@ function createServiceProxy(
 
       if (typeof result === "function") {
         return (...args: any[]) => {
-          let funcResult;
-          let error;
+          const serviceCallId = `sc-${currentServiceCallId++}`;
+          let funcResult: any;
+          let error: any;
 
           try {
             funcResult = result.call(target, ...args);
           } catch (e) {
             error = e;
-            throw e;
-          } finally {
-            devContext.hooks.onServiceCall!({
+            devContext.hooks.onServiceCall?.({
               actionId: devContext.actionId!,
+              serviceCallId,
               name: String(key),
               path: devContext.path.concat(parentKey),
               args,
-              result: funcResult,
+              result: undefined,
               error,
+              isAsync: false,
             });
+            throw e;
+          }
+
+          const isAsync = funcResult instanceof Promise;
+
+          devContext.hooks.onServiceCall?.({
+            actionId: devContext.actionId!,
+            serviceCallId,
+            name: String(key),
+            path: devContext.path.concat(parentKey),
+            args,
+            result: isAsync ? undefined : funcResult,
+            error: undefined,
+            isAsync,
+          });
+
+          if (isAsync) {
+            funcResult
+              .then((res: any) => {
+                devContext.hooks.onServiceCallResult?.({
+                  serviceCallId,
+                  result: res,
+                });
+              })
+              .catch((err: any) => {
+                devContext.hooks.onServiceCallResult?.({
+                  serviceCallId,
+                  error: err,
+                });
+              });
           }
 
           return funcResult;
@@ -414,6 +460,7 @@ function createServiceProxy(
 }
 
 let currentActionId = 0;
+let currentServiceCallId = 0;
 
 function createActionProxy(
   target: any,
@@ -421,11 +468,11 @@ function createActionProxy(
   func: Function,
   devContext: DevContext,
 ) {
-  const actionId = `action-${currentActionId++}`;
   const actionName = devContext.path.concat(key).join(".");
 
   return new Proxy(func, {
     apply(_, __, args) {
+      const actionId = `action-${currentActionId++}`;
       const startTime = performance.now();
 
       const proxy = createObjectMutationProxy(target, {
@@ -433,7 +480,7 @@ function createActionProxy(
         actionId,
       });
 
-      devContext.hooks.onActionStart({
+      devContext.hooks.onActionStart?.({
         actionId,
         name: actionName,
         path: devContext.path.concat(key),
@@ -443,28 +490,30 @@ function createActionProxy(
 
       const result = Reflect.apply(func, proxy, args);
 
-      if (result instanceof Promise) {
+      const isAsync = result instanceof Promise;
+
+      if (isAsync) {
         result
           .then(() => {
-            const duration = performance.now() - startTime;
-            devContext.hooks.onActionEnd({
+            devContext.hooks.onActionEnd?.({
               actionId,
-              duration,
+              duration: performance.now() - startTime,
+              isAsync: true,
             });
           })
           .catch((error) => {
-            const duration = performance.now() - startTime;
-            devContext.hooks.onActionEnd({
+            devContext.hooks.onActionEnd?.({
               actionId,
-              duration,
+              duration: performance.now() - startTime,
               error,
+              isAsync: true,
             });
           });
       } else {
-        const duration = performance.now() - startTime;
-        devContext.hooks.onActionEnd({
+        devContext.hooks.onActionEnd?.({
           actionId,
-          duration,
+          duration: performance.now() - startTime,
+          isAsync: false,
         });
       }
 
@@ -491,7 +540,7 @@ function createArrayDevtoolsProxy(
       if (mutatingArrayMethods.includes(key as string)) {
         return (...args: []) => {
           const val = result.call(target, ...args);
-          devContext.hooks.onMutation({
+          devContext.hooks.onMutation?.({
             actionId: devContext.actionId!,
             mutation: {
               path: devContext.path.concat(parentKey as string).join("."),
