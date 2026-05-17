@@ -88,6 +88,7 @@ class DevtoolsStore {
       this.stateSnapshot[instanceName] = {};
     }
     setNestedPath(this.stateSnapshot[instanceName], rest, value);
+    this.stateSnapshot[instanceName] = { ...this.stateSnapshot[instanceName] };
   }
 
   handleComputed({ path, value }: ComputedParams) {
@@ -97,6 +98,7 @@ class DevtoolsStore {
     }
     setNestedPath(this.stateSnapshot[instanceName], rest, value);
     this.computedPaths.add(path.join("."));
+    this.stateSnapshot[instanceName] = { ...this.stateSnapshot[instanceName] };
   }
 
   handleActionStart({
@@ -145,6 +147,14 @@ class DevtoolsStore {
     const entry = this._actionMap.get(actionId);
     if (!entry) return;
     entry.changes.push({ kind: "mutation", mutation });
+
+    if (mutation.operation === "set") {
+      const [instanceName, ...rest] = mutation.path.split(".");
+      if (this.stateSnapshot[instanceName]) {
+        setNestedPath(this.stateSnapshot[instanceName], rest, mutation.args[0]);
+        this.stateSnapshot[instanceName] = { ...this.stateSnapshot[instanceName] };
+      }
+    }
   }
 
   handleServiceCall({

@@ -25,24 +25,21 @@ class AppState {
   get todos() {
     return Object.values(this._todos);
   }
-  private withStorage(cb: () => void) {
-    cb();
+  private syncStorage() {
     this._jsonStorageService.set("todos", this._todos);
   }
   addTodo(title: string) {
-    this.withStorage(() => {
-      const id = uuid.v4();
-      this._todos[id] = {
-        id,
-        title,
-        completed: false,
-      };
-    });
+    const id = uuid.v4();
+    this._todos[id] = {
+      id,
+      title,
+      completed: false,
+    };
+    this.syncStorage();
   }
   toggleTodo(id: string) {
-    this.withStorage(() => {
-      this._todos[id].completed = !this._todos[id].completed;
-    });
+    this._todos[id].completed = !this._todos[id].completed;
+    this.syncStorage();
   }
 }
 
