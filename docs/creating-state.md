@@ -5,7 +5,7 @@ Define state as a plain class and expose it as a module-level singleton:
 ```ts
 import { reactive } from "reactx";
 
-class App {
+class AppState {
   count = 0;
 
   increment() {
@@ -17,7 +17,7 @@ class App {
   }
 }
 
-export const app = reactive(new App());
+export const app = reactive(new AppState());
 ```
 
 Components import and use it directly — no providers or hooks needed:
@@ -47,17 +47,19 @@ class UserState {
   }
 }
 
-class App {
+class AppState {
   user = new UserState();
 }
 
-export const app = reactive(new App());
+export const app = reactive(new AppState());
 ```
 
 ```tsx
 // UserCard only re-renders when user state changes
 function UserCard({ user }: { user: UserState }) {
-  return <input value={user.name} onChange={(e) => user.rename(e.target.value)} />;
+  return (
+    <input value={user.name} onChange={(e) => user.rename(e.target.value)} />
+  );
 }
 
 function Feed() {
@@ -70,15 +72,15 @@ function Feed() {
 Use a getter backed by a private field to create a sub-state instance on first access and cache it for the lifetime of the app:
 
 ```ts
-class App {
-  #dashboard?: DashboardState;
+class AppState {
+  private _dashboard?: DashboardState;
 
   get dashboard() {
-    return (this.#dashboard ??= new DashboardState());
+    return (this._dashboard ??= new DashboardState());
   }
 }
 
-export const app = reactive(new App());
+export const app = reactive(new AppState());
 ```
 
 `DashboardState` is only instantiated the first time `app.dashboard` is accessed. After that the same instance is always returned.
@@ -88,14 +90,14 @@ export const app = reactive(new App());
 For one instance per entity (e.g. one state object per user ID), back a method with a private `Map`:
 
 ```ts
-class App {
-  #profiles = new Map<string, ProfileState>();
+class AppState {
+  private _profiles = new Map<string, ProfileState>();
 
   profile(userId: string) {
-    if (!this.#profiles.has(userId)) {
-      this.#profiles.set(userId, new ProfileState(userId));
+    if (!this._profiles.has(userId)) {
+      this._profiles.set(userId, new ProfileState(userId));
     }
-    return this.#profiles.get(userId)!;
+    return this._profiles.get(userId)!;
   }
 }
 

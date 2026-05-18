@@ -90,7 +90,7 @@ import { reactive } from "reactx";
 import { browserServices } from "./services/browser";
 import type { Services } from "./services/interface";
 
-class App {
+class AppState {
   token: string | undefined;
 
   constructor(private services: Services) {

@@ -54,7 +54,7 @@ function UserList() {
 
 ## When to use local state
 
-`useState` is appropriate when the state controls something that is entirely a UI concern and has no meaning in the application model:
+`useState` belongs only in pure UI primitives — components like `Button`, `Dropdown`, or `Tooltip` that are generic, reusable, and have no knowledge of your application:
 
 ```tsx
 function Tooltip({ content, children }: { content: string; children: React.ReactNode }) {
@@ -69,14 +69,14 @@ function Tooltip({ content, children }: { content: string; children: React.React
 }
 ```
 
-Whether a tooltip is visible is a rendering detail. The application does not care and should not know. If you find yourself reaching for `useState` to track loading state, fetched data, or anything related to your domain, move it to the state class instead.
+Everything else — including things that feel like UI, like whether a sidebar is expanded, whether a modal is open, or which tab is active — belongs in your state class. These things affect the experience of the application as a whole. They may influence what data gets loaded, what the user can do next, or what the URL should be. Keeping them in state makes them inspectable in DevTools, testable without mounting components, and available to any part of the application without prop drilling.
 
 ## Blocking async data
 
 When there is nothing meaningful to show until data is ready, store the Promise on the state class and consume it with `use()`. The component suspends; a `Suspense` boundary above controls the loading UI:
 
 ```ts
-class App {
+class AppState {
   posts = this.services.http.get<Post[]>("/posts");
 }
 ```
