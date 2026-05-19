@@ -6,7 +6,7 @@ reactx divides an application into four layers. At each end you have something c
 services → state → components → ui-components
 ```
 
-**Services** and **ui-components** know nothing about your app. **State** and **components** know everything about it.
+**Services** and **ui-components** knows nothing about the domains your app. **State** and **components** represents the domains of your app.
 
 ---
 
@@ -19,16 +19,16 @@ A service has no knowledge of your domain. It knows how to `get`, `post`, `subsc
 ```ts
 // ✓ A service: infrastructure verbs, no domain knowledge
 interface Http {
-  get<T>(url: string): Promise<T>
-  post<T>(url: string, body: unknown): Promise<T>
-  patch<T>(url: string, body: unknown): Promise<T>
-  delete(url: string): Promise<void>
+  get<T>(url: string): Promise<T>;
+  post<T>(url: string, body: unknown): Promise<T>;
+  patch<T>(url: string, body: unknown): Promise<T>;
+  delete(url: string): Promise<void>;
 }
 
 // ✗ Not a service: domain logic wearing a service costume
 interface UserService {
-  fetchCurrentUser(): Promise<User>
-  updateUsername(id: string, name: string): Promise<void>
+  fetchCurrentUser(): Promise<User>;
+  updateUsername(id: string, name: string): Promise<void>;
 }
 ```
 
@@ -36,26 +36,7 @@ The second example isn't a service — it's domain logic. That code belongs as m
 
 This distinction keeps services reusable across every feature, trivially swappable when the platform changes (web → native), and easy to replace with in-memory fakes in tests.
 
-Services are injected into state classes through the constructor, never imported directly:
-
-```ts
-class AppState {
-  constructor(private services: Services) {}
-
-  async signIn(email: string, password: string) {
-    const { token } = await this.services.http.post<{ token: string }>(
-      "/auth/login",
-      { email, password }
-    )
-    this.token = token
-    this.services.persistence.set("token", token)
-  }
-}
-
-export const app = reactive(new AppState(browserServices))
-```
-
-`AppState` knows nothing about `fetch`, `localStorage`, or any particular HTTP client. It works against an interface. Swap the implementation and the state class is untouched.
+Services are injected into state classes through the constructor or by dependecy injection.
 
 ---
 
@@ -64,15 +45,23 @@ export const app = reactive(new AppState(browserServices))
 State owns the truth of your application. It holds data, exposes computed values derived from that data, and provides methods through which everything is mutated.
 
 ```ts
-class AppState {
-  count = 0                              // data
+export class AppState {
+  count = 0; // data
 
-  get doubled() { return this.count * 2 } // derived value
+  get doubled() {
+    return this.count * 2;
+  } // derived value
 
-  increment() { this.count++ }           // mutation
+  increment() {
+    this.count++;
+  } // mutation
 }
 
-export const app = reactive(new AppState())
+export const AppContext = createContext<AppState | null>(null);
+
+export function useApp() {
+  return useContext(AppContext);
+}
 ```
 
 **Properties** are plain class fields — no decorators, no boilerplate. reactx makes them observable automatically.
@@ -87,20 +76,44 @@ Everything that has meaning in your application belongs here: which user is sign
 
 ## Components
 
+You expose the `AppState` from the root of your component structure:
+
+```tsx
+import { reactive } from "reactx";
+import { AppContext, AppState } from "./state";
+import { BrowserService } from "./services";
+
+import { reactive } from "reactx";
+import { createRoot } from "react-dom/client";
+
+const services = {
+  browser: new BrowserService(),
+};
+const app = reactive(new AppState());
+
+createRoot(document.getElementById("root")!).render(
+  <AppContext.Provider value={app}>
+    <App />
+  </AppContext.Provider>,
+);
+```
+
 A component's job is to derive UI from state. It reads what it needs, renders it, and calls methods on state when the user acts.
 
 ```tsx
 function Header() {
+  const app = useApp();
+
   return (
     <header>
       <span>{app.session.user?.name}</span>
       <button onClick={app.session.signOut}>Sign out</button>
     </header>
-  )
+  );
 }
 ```
 
-No providers. No context. No selectors. No subscription hooks. Import state and use it.
+No selectors. No subscription hooks. Call `useApp()` and use the state directly.
 
 Components re-render only when the specific properties they read actually change — not on every state update, just the ones that are relevant to what they rendered.
 

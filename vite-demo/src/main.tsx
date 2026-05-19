@@ -1,6 +1,13 @@
-import "reflect-metadata";
+import { reactive } from "reactx";
 import { createRoot } from "react-dom/client";
-import "./index.css";
+import "./App.css";
 import { App } from "./ui/App";
+import { AppContext, AppState, JSONStorageService } from "./app";
 
-createRoot(document.getElementById("root")!).render(<App />);
+const app = reactive(new AppState(new JSONStorageService()));
+
+createRoot(document.getElementById("root")!).render(
+  <AppContext.Provider value={app}>
+    <App />
+  </AppContext.Provider>,
+);

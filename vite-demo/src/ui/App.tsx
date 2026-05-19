@@ -1,12 +1,30 @@
-import { useState } from "react";
-import { app } from "../app";
+import { Suspense, use, useDeferredValue, useState } from "react";
+import { useApp } from "../app";
 
-export function App() {
-  const [newTitle, setNewTitle] = useState("");
+function AsyncCounter() {
+  const app = useApp();
+  const deferredCount = useDeferredValue(app.asyncCount);
+  const countIsPending = deferredCount !== app.asyncCount;
+  const count = use(deferredCount);
 
   return (
     <div>
+      <h4>Count: {countIsPending ? "(Loading...)" : count}</h4>
+      <button onClick={() => app.increaseCount()}>Increase</button>
+    </div>
+  );
+}
+
+export function App() {
+  const app = useApp();
+  const [newTitle, setNewTitle] = useState("");
+
+  return (
+    <div className="app">
       <h1>Todos</h1>
+      <Suspense fallback="Loading counter...">
+        <AsyncCounter />
+      </Suspense>
       <input
         value={newTitle}
         onChange={(event) => setNewTitle(event.target.value)}

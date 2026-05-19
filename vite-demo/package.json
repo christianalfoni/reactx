@@ -10,8 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "reactx": "file:..",
     "reflect-metadata": "^0.2.2",
     "tsyringe": "^4.10.0",
@@ -19,8 +19,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
-    "@types/react": "^19.0.8",
-    "@types/react-dom": "^19.0.3",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react-swc": "^4.3.0",
     "eslint": "^9.19.0",
     "eslint-plugin-react-hooks": "^5.0.0",
