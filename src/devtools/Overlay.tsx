@@ -354,7 +354,16 @@ function MutationRow({
       </button>
       {open && (
         <div style={{ padding: `0 14px 4px ${indent + 14}px` }}>
-          <JsonNode value={displayValue} depth={0} defaultOpen />
+          <div style={{ ...mono, color: C.muted, paddingLeft: 0 }}>{Array.isArray(displayValue) ? "[" : "{"}</div>
+          {(Array.isArray(displayValue)
+            ? Array.from({ length: displayValue.length }, (_, i) => i)
+            : (Object.keys(displayValue) as Array<string | number>)
+                .filter((k) => typeof (displayValue as any)[k] !== "function")
+                .sort()
+          ).map((k) => (
+            <JsonNode key={String(k)} value={(displayValue as any)[k]} label={k} depth={1} />
+          ))}
+          <div style={{ ...mono, color: C.muted, paddingLeft: 0 }}>{Array.isArray(displayValue) ? "]" : "}"}</div>
         </div>
       )}
     </div>
