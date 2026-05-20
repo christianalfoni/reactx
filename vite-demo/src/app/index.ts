@@ -24,7 +24,6 @@ export class AppState {
   get todos() {
     return Object.values(this._todos);
   }
-  count = Promise.resolve(0);
   constructor(private _jsonStorageService: JSONStorageService) {}
   private syncStorage() {
     this._jsonStorageService.set("todos", this._todos);
@@ -41,20 +40,6 @@ export class AppState {
   toggleTodo(id: string) {
     this._todos[id].completed = !this._todos[id].completed;
     this.syncStorage();
-  }
-  async increaseCount() {
-    this.count = new Promise((resolve) => {
-      this.count.then((currentCount) => {
-        setTimeout(() => resolve(currentCount + 1), 1000);
-      });
-    });
-  }
-  async decreaseCount() {
-    this.count = new Promise((resolve) => {
-      this.count.then((currentCount) => {
-        setTimeout(() => resolve(currentCount - 1), 1000);
-      });
-    });
   }
 }
 
