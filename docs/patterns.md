@@ -153,22 +153,33 @@ const app = reactive(new AppState(testServices));
 
 For larger apps, [tsyringe](https://github.com/microsoft/tsyringe) wires services automatically via decorators instead of a hand-rolled `Services` object. Register implementations once; the container resolves the full graph.
 
+Use abstract classes as service contracts — interfaces are erased at runtime, but abstract classes are preserved, so tsyringe can resolve them via `reflect-metadata` without explicit tokens.
+
 ```ts
-// services/tokens.ts
-export const HttpToken = token<Http>("Http")
-export const PersistenceToken = token<Persistence>("Persistence")
+// services/http.ts
+export abstract class Http {
+  abstract get<T>(url: string): Promise<T>
+  abstract post<T>(url: string, body: unknown): Promise<T>
+}
+
+// services/persistence.ts
+export abstract class Persistence {
+  abstract get<T>(key: string): T | null
+  abstract set<T>(key: string, value: T): void
+  abstract remove(key: string): void
+}
 ```
 
 ```ts
 // services/browser.ts
 @injectable()
-export class BrowserHttp implements Http {
+export class BrowserHttp extends Http {
   async get<T>(url: string) { ... }
   async post<T>(url: string, body: unknown) { ... }
 }
 
 @injectable()
-export class BrowserPersistence implements Persistence {
+export class BrowserPersistence extends Persistence {
   get<T>(key: string) { ... }
   set<T>(key: string, value: T) { ... }
   remove(key: string) { ... }
@@ -177,8 +188,8 @@ export class BrowserPersistence implements Persistence {
 
 ```ts
 // container.ts
-container.registerSingleton(HttpToken, BrowserHttp)
-container.registerSingleton(PersistenceToken, BrowserPersistence)
+container.registerSingleton(Http, BrowserHttp)
+container.registerSingleton(Persistence, BrowserPersistence)
 ```
 
 ```ts
@@ -186,8 +197,8 @@ container.registerSingleton(PersistenceToken, BrowserPersistence)
 @singleton()
 class AppState {
   constructor(
-    @inject(HttpToken) private http: Http,
-    @inject(PersistenceToken) private persistence: Persistence,
+    private http: Http,
+    private persistence: Persistence,
   ) {}
 }
 
@@ -197,8 +208,8 @@ export const app = reactive(container.resolve(AppState))
 **Testing** — register in-memory implementations before resolving:
 
 ```ts
-container.registerInstance(HttpToken, { get: async () => fixtureData, post: async () => fixtureData })
-container.registerInstance(PersistenceToken, new InMemoryPersistence())
+container.registerInstance(Http, { get: async () => fixtureData, post: async () => fixtureData })
+container.registerInstance(Persistence, new InMemoryPersistence())
 
 const app = reactive(container.resolve(AppState))
 ```
