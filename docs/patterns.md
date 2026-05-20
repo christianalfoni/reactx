@@ -12,25 +12,27 @@ Break large state into focused classes. A single `reactive()` call on the root p
 
 ```ts
 class UserState {
-  name = "Alice"
-  rename(name: string) { this.name = name }
+  name = "Alice";
+  rename(name: string) {
+    this.name = name;
+  }
 }
 
 class AppState {
-  user = new UserState()
+  user = new UserState();
 }
 
-export const app = reactive(new AppState())
+export const app = reactive(new AppState());
 ```
 
 **Lazy** — instantiate on first access and cache:
 
 ```ts
 class AppState {
-  private _dashboard?: DashboardState
+  private _dashboard?: DashboardState;
 
   get dashboard() {
-    return (this._dashboard ??= new DashboardState())
+    return (this._dashboard ??= new DashboardState());
   }
 }
 ```
@@ -39,13 +41,13 @@ class AppState {
 
 ```ts
 class AppState {
-  private _profiles = new Map<string, ProfileState>()
+  private _profiles = new Map<string, ProfileState>();
 
   profile(userId: string) {
     if (!this._profiles.has(userId)) {
-      this._profiles.set(userId, new ProfileState(userId))
+      this._profiles.set(userId, new ProfileState(userId));
     }
-    return this._profiles.get(userId)!
+    return this._profiles.get(userId)!;
   }
 }
 ```
@@ -54,11 +56,13 @@ class AppState {
 
 ```tsx
 function UserCard({ user }: { user: UserState }) {
-  return <input value={user.name} onChange={e => user.rename(e.target.value)} />
+  return (
+    <input value={user.name} onChange={(e) => user.rename(e.target.value)} />
+  );
 }
 
 function App() {
-  return <UserCard user={app.user} />
+  return <UserCard user={app.user} />;
 }
 ```
 
@@ -71,43 +75,47 @@ Define interface, provide browser implementation, inject via constructor:
 ```ts
 // services/interface.ts
 export interface Http {
-  get<T>(url: string): Promise<T>
-  post<T>(url: string, body: unknown): Promise<T>
+  get<T>(url: string): Promise<T>;
+  post<T>(url: string, body: unknown): Promise<T>;
 }
 
 export interface Persistence {
-  get<T>(key: string): T | undefined
-  set<T>(key: string, value: T): void
-  remove(key: string): void
+  get<T>(key: string): T | undefined;
+  set<T>(key: string, value: T): void;
+  remove(key: string): void;
 }
 
-export interface Services { http: Http; persistence: Persistence }
+export interface Services {
+  http: Http;
+  persistence: Persistence;
+}
 ```
 
 ```ts
 // app.ts
 class AppState {
-  token: string | undefined
+  token: string | undefined;
 
   constructor(private services: Services) {
-    this.token = services.persistence.get<string>("token")
+    this.token = services.persistence.get<string>("token");
   }
 
   async signIn(email: string, password: string) {
     const { token } = await this.services.http.post<{ token: string }>(
-      "/auth/login", { email, password }
-    )
-    this.token = token
-    this.services.persistence.set("token", token)
+      "/auth/login",
+      { email, password },
+    );
+    this.token = token;
+    this.services.persistence.set("token", token);
   }
 
   signOut() {
-    this.token = undefined
-    this.services.persistence.remove("token")
+    this.token = undefined;
+    this.services.persistence.remove("token");
   }
 }
 
-export const app = reactive(new AppState(browserServices))
+export const app = reactive(new AppState(browserServices));
 ```
 
 **Testing** — swap in lightweight in-memory implementations, no mocking needed:
@@ -116,110 +124,111 @@ export const app = reactive(new AppState(browserServices))
 const testServices: Services = {
   persistence: {
     store: new Map<string, unknown>(),
-    get<T>(key: string) { return this.store.get(key) as T | undefined },
-    set<T>(key: string, value: T) { this.store.set(key, value) },
-    remove(key: string) { this.store.delete(key) },
+    get<T>(key: string) {
+      return this.store.get(key) as T | undefined;
+    },
+    set<T>(key: string, value: T) {
+      this.store.set(key, value);
+    },
+    remove(key: string) {
+      this.store.delete(key);
+    },
   },
   http: {
-    async get<T>() { return fixtureData as T },
-    async post<T>() { return fixtureData as T },
+    async get<T>() {
+      return fixtureData as T;
+    },
+    async post<T>() {
+      return fixtureData as T;
+    },
   },
-}
+};
 
-const app = reactive(new AppState(testServices))
+const app = reactive(new AppState(testServices));
 ```
 
 ---
 
-## Blocking async data
+## Dependency injection with tsyringe
 
-Store a Promise on state; use React's `use()` to unwrap it. The component suspends until the data arrives; a `Suspense` boundary controls the loading UI:
+For larger apps, [tsyringe](https://github.com/microsoft/tsyringe) wires services automatically via decorators instead of a hand-rolled `Services` object. Register implementations once; the container resolves the full graph.
+
+```ts
+// services/tokens.ts
+export const HttpToken = token<Http>("Http")
+export const PersistenceToken = token<Persistence>("Persistence")
+```
+
+```ts
+// services/browser.ts
+@injectable()
+export class BrowserHttp implements Http {
+  async get<T>(url: string) { ... }
+  async post<T>(url: string, body: unknown) { ... }
+}
+
+@injectable()
+export class BrowserPersistence implements Persistence {
+  get<T>(key: string) { ... }
+  set<T>(key: string, value: T) { ... }
+  remove(key: string) { ... }
+}
+```
+
+```ts
+// container.ts
+container.registerSingleton(HttpToken, BrowserHttp)
+container.registerSingleton(PersistenceToken, BrowserPersistence)
+```
+
+```ts
+// app.ts
+@singleton()
+class AppState {
+  constructor(
+    @inject(HttpToken) private http: Http,
+    @inject(PersistenceToken) private persistence: Persistence,
+  ) {}
+}
+
+export const app = reactive(container.resolve(AppState))
+```
+
+**Testing** — register in-memory implementations before resolving:
+
+```ts
+container.registerInstance(HttpToken, { get: async () => fixtureData, post: async () => fixtureData })
+container.registerInstance(PersistenceToken, new InMemoryPersistence())
+
+const app = reactive(container.resolve(AppState))
+```
+
+---
+
+## Invariants
+
+Some state is nullable at the top level but guaranteed non-null in certain contexts — an authenticated user, a loaded resource, a selected item. Rather than threading null checks through every component that can only ever render when the value exists, define a getter that throws if the invariant is violated:
 
 ```ts
 class AppState {
-  posts = this.services.http.get<Post[]>("/posts")
-}
-```
+  user: User | null = null
 
-```tsx
-function PostList() {
-  const posts = use(app.posts)
-  return <ul>{posts.map(p => <li key={p.id}>{p.title}</li>)}</ul>
-}
-
-function Feed() {
-  return (
-    <Suspense fallback={<Spinner />}>
-      <PostList />
-    </Suspense>
-  )
-}
-```
-
----
-
-## Non-blocking async operations
-
-Use `useTransition` when the UI already has content and the operation should run without suspending:
-
-```tsx
-function RefreshButton() {
-  const [isPending, startTransition] = useTransition()
-  return (
-    <button onClick={() => startTransition(() => app.loadPosts())} disabled={isPending}>
-      {isPending ? "Refreshing…" : "Refresh"}
-    </button>
-  )
-}
-```
-
-The same pattern works for form submissions:
-
-```tsx
-function NewPostForm() {
-  const [isPending, startTransition] = useTransition()
-
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const title = new FormData(e.currentTarget).get("title") as string
-    startTransition(() => app.createPost(title))
+  get authenticatedUser(): User {
+    if (!this.user) throw new Error("No authenticated user")
+    return this.user
   }
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <input name="title" disabled={isPending} />
-      <button type="submit" disabled={isPending}>{isPending ? "Saving…" : "Save"}</button>
-    </form>
-  )
 }
 ```
 
----
-
-## Finite state
-
-Model explicit phases as a union type. TypeScript narrows what's available in each branch — no nullable fields, no boolean flags:
+Components rendered inside an authenticated route use the invariant directly — no null check, no prop drilling, no ceremony:
 
 ```tsx
-function SessionView() {
-  const { phase } = app.session
-
-  if (phase.current === "AUTHENTICATED") {
-    return (
-      <div>
-        Welcome, {phase.user.name}
-        <button onClick={phase.signOut}>Sign out</button>
-      </div>
-    )
-  }
-
-  if (phase.current === "AUTHENTICATING") {
-    return <Spinner />
-  }
-
-  return <SignInForm onSubmit={phase.signIn} />
+function Profile() {
+  return <div>{app.authenticatedUser.name}</div>
 }
 ```
+
+If the invariant fires it's a programming error (wrong render tree), not a runtime condition to handle gracefully. This is the same contract `useContext` enforces when you throw on missing provider — the guarantee lives at the boundary (the route, the provider), not scattered across every consumer.
 
 ---
 
@@ -229,14 +238,16 @@ Wire a state subscription to the component lifecycle with `useEffect`. Because `
 
 ```tsx
 function Dashboard() {
-  useEffect(() => app.dashboard.subscribe(), [])
+  useEffect(() => app.dashboard.subscribe(), []);
 
   return (
     <ul>
-      {app.dashboard.statistics.map(s => (
-        <li key={s.id}>{s.label}: {s.value}</li>
+      {app.dashboard.statistics.map((s) => (
+        <li key={s.id}>
+          {s.label}: {s.value}
+        </li>
       ))}
     </ul>
-  )
+  );
 }
 ```

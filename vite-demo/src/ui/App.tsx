@@ -1,16 +1,44 @@
-import { Suspense, use, useDeferredValue, useState } from "react";
+import {
+  startTransition,
+  Suspense,
+  use,
+  useDeferredValue,
+  useOptimistic,
+  useState,
+} from "react";
 import { useApp } from "../app";
 
 function AsyncCounter() {
   const app = useApp();
-  const deferredCount = useDeferredValue(app.asyncCount);
-  const countIsPending = deferredCount !== app.asyncCount;
+  const deferredCount = useDeferredValue(app.count);
   const count = use(deferredCount);
+  const [optimisticCount, setOptimisticCount] = useOptimistic(count);
 
   return (
     <div>
-      <h4>Count: {countIsPending ? "(Loading...)" : count}</h4>
-      <button onClick={() => app.increaseCount()}>Increase</button>
+      <h4 style={{ opacity: count !== optimisticCount ? "0.5" : 1 }}>
+        Count: {optimisticCount}
+      </h4>
+      <button
+        onClick={() => {
+          startTransition(async () => {
+            setOptimisticCount(optimisticCount + 1);
+            await app.increaseCount();
+          });
+        }}
+      >
+        Increase
+      </button>
+      <button
+        onClick={() => {
+          startTransition(async () => {
+            setOptimisticCount(optimisticCount - 1);
+            await app.decreaseCount();
+          });
+        }}
+      >
+        Increase
+      </button>
     </div>
   );
 }
