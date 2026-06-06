@@ -10,6 +10,7 @@ npm install reactx@alpha
 
 - [Architecture](docs/architecture.md) — the services → state → components → ui-components layering
 - [Patterns](docs/patterns.md) — composing state, services, invariants, subscriptions
+- [Scaling up](docs/scaling.md) — from a single class to platform-split components over a shared state layer
 
 ## Quick example
 
