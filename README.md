@@ -45,24 +45,6 @@ function App() {
 
 `reactive()` makes the class instance lazily observable. Components re-render only when the properties they actually read change — no providers, no hooks, no boilerplate. Build your application state and logic with an objected oriented mindset and derive a functional UI from it.
 
-## Using with AI coding agents
-
-Copy this into your `CLAUDE.md` (or equivalent agent instructions file):
-
-```markdown
-## Services, State and UI
-
-**Setup**: `reactive(new AppState(services))` makes the instance observable. The Vite plugin auto-wraps all exported React components as observers. Wire to React with `createContext` + a `useXxx` hook that throws on missing provider.
-
-**`*State` classes** own observable state (properties), computed values (getters), and mutations (methods). No special APIs — plain OO.
-
-**`*Service` classes** own side effects (HTTP, storage, timers). Inject via constructor; define an interface so tests can swap in lightweight implementations without mocking.
-
-**Components** read from context and call methods directly. No special hooks needed for reading state.
-
-**Invariants**: When a value is nullable at the top but guaranteed present in a subtree, expose a getter that throws. Components in that subtree use it without null checks — a violation is a programming error, not a runtime condition.
-```
-
 ## Setup
 
 Add the Vite plugin to your config **before** the React plugin:
