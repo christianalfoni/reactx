@@ -7,5 +7,6 @@
     "lib": ["dom", "esnext.disposable", "ESNext"],
     "declaration": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }

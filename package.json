@@ -13,7 +13,8 @@
     "doc": "docs"
   },
   "files": [
-    "dist"
+    "dist",
+    "docs"
   ],
   "module": "./dist/esm/index.js",
   "main": "./dist/esm/index.js",
