@@ -3,7 +3,7 @@
 > Transparent reactive state management for React
 
 ```sh
-npm install reactx@alpha
+npm install reactx
 ```
 
 ## Documentation
