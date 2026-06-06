@@ -149,84 +149,17 @@ const app = reactive(new AppState(testServices));
 
 ---
 
-## Dependency injection with tsyringe
-
-For larger apps, [tsyringe](https://github.com/microsoft/tsyringe) wires services automatically via decorators instead of a hand-rolled `Services` object. Register implementations once; the container resolves the full graph.
-
-Use abstract classes as service contracts — interfaces are erased at runtime, but abstract classes are preserved, so tsyringe can resolve them via `reflect-metadata` without explicit tokens.
-
-```ts
-// services/http.ts
-export abstract class Http {
-  abstract get<T>(url: string): Promise<T>
-  abstract post<T>(url: string, body: unknown): Promise<T>
-}
-
-// services/persistence.ts
-export abstract class Persistence {
-  abstract get<T>(key: string): T | null
-  abstract set<T>(key: string, value: T): void
-  abstract remove(key: string): void
-}
-```
-
-```ts
-// services/browser.ts
-@injectable()
-export class BrowserHttp extends Http {
-  async get<T>(url: string) { ... }
-  async post<T>(url: string, body: unknown) { ... }
-}
-
-@injectable()
-export class BrowserPersistence extends Persistence {
-  get<T>(key: string) { ... }
-  set<T>(key: string, value: T) { ... }
-  remove(key: string) { ... }
-}
-```
-
-```ts
-// container.ts
-container.registerSingleton(Http, BrowserHttp)
-container.registerSingleton(Persistence, BrowserPersistence)
-```
-
-```ts
-// app.ts
-@singleton()
-class AppState {
-  constructor(
-    private http: Http,
-    private persistence: Persistence,
-  ) {}
-}
-
-export const app = reactive(container.resolve(AppState))
-```
-
-**Testing** — register in-memory implementations before resolving:
-
-```ts
-container.registerInstance(Http, { get: async () => fixtureData, post: async () => fixtureData })
-container.registerInstance(Persistence, new InMemoryPersistence())
-
-const app = reactive(container.resolve(AppState))
-```
-
----
-
 ## Invariants
 
 Some state is nullable at the top level but guaranteed non-null in certain contexts — an authenticated user, a loaded resource, a selected item. Rather than threading null checks through every component that can only ever render when the value exists, define a getter that throws if the invariant is violated:
 
 ```ts
 class AppState {
-  user: User | null = null
+  user: User | null = null;
 
   get authenticatedUser(): User {
-    if (!this.user) throw new Error("No authenticated user")
-    return this.user
+    if (!this.user) throw new Error("No authenticated user");
+    return this.user;
   }
 }
 ```
@@ -235,7 +168,7 @@ Components rendered inside an authenticated route use the invariant directly —
 
 ```tsx
 function Profile() {
-  return <div>{app.authenticatedUser.name}</div>
+  return <div>{app.authenticatedUser.name}</div>;
 }
 ```
 
